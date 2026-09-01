@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_RescueSync"
+                  targetNamespace="http://rescuesync.dssd.2026"
+                  exporter="RescueSync" exporterVersion="1.0">
+  <bpmn:collaboration id="Collaboration_RescueSync">
+    <bpmn:participant id="Participant_RescueSync" name="RescueSync - Gestion Integral de la Emergencia" processRef="Process_RescueSync" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_RescueSync" name="Gestion Integral de la Emergencia" isExecutable="true">
+    <bpmn:documentation>Proceso de orquestacion del ciclo de vida completo de una emergencia en RescueSync.
+Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion):
+  - emergenciaId : java.lang.Long
+  - municipioId : java.lang.Long
+  - nivelGravedad : java.lang.String
+  - ventanaOfertasISO : java.lang.String
+  - plazoAdjudicacionISO : java.lang.String
+  - coberturaCompleta : java.lang.Boolean
+  - porcentajeCobertura : java.lang.Double
+  - decisionCoordinador : java.lang.String
+  - ofertasJson : java.lang.String
+  - ongsAdjudicadas : java.lang.String
+</bpmn:documentation>
+    <bpmn:laneSet id="LaneSet_RescueSync">
+      <bpmn:lane id="Lane_muni" name="Municipio (Operador Municipal)">
+        <bpmn:flowNodeRef>StartEmergencia</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_registrarEmergencia</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_mergeAdjudicacion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_adjudicarOfertas</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Bnd_timeoutAdjudicacion</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_ccr" name="Centro Coordinador Regional">
+        <bpmn:flowNodeRef>T_generarLotes</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_publicarConvocatoria</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_evaluarCobertura</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_curso</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_sinCobertura</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_adjudicacionEscalada</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_monitorearEjecucion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_validarCierre</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_ong" name="ONG / Organismo de Rescate">
+        <bpmn:flowNodeRef>T_confirmarFinalizacion</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_sys" name="Sistema RescueSync (BPM / Conectores)">
+        <bpmn:flowNodeRef>S_notificarRed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Timer_ventanaOfertas</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_obtenerOfertas</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_validarNacional</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_calcularCobertura</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_cobertura</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_mergeNotif</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_notificarAdjudicacion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_registrarCompromiso</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_liberarRecursos</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_notificarCierre</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_emergenciaCerrada</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEmergencia" name="Emergencia detectada">
+      <bpmn:outgoing>Flow_01</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="T_registrarEmergencia" name="Registrar Emergencia">
+      <bpmn:incoming>Flow_01</bpmn:incoming>
+      <bpmn:outgoing>Flow_02</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="T_generarLotes" name="Revisar Informacion y Generar Lotes de Necesidades">
+      <bpmn:incoming>Flow_02</bpmn:incoming>
+      <bpmn:incoming>Flow_curso_reformular</bpmn:incoming>
+      <bpmn:outgoing>Flow_03</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="T_publicarConvocatoria" name="Publicar Convocatoria Oficial">
+      <bpmn:incoming>Flow_03</bpmn:incoming>
+      <bpmn:incoming>Flow_curso_reabrir</bpmn:incoming>
+      <bpmn:outgoing>Flow_04</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="S_notificarRed" name="Notificar Convocatoria a la Red de ONGs">
+      <bpmn:incoming>Flow_04</bpmn:incoming>
+      <bpmn:outgoing>Flow_05</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateCatchEvent id="Timer_ventanaOfertas" name="Ventana de Recepcion de Ofertas">
+      <bpmn:incoming>Flow_05</bpmn:incoming>
+      <bpmn:outgoing>Flow_06</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TD_Timer_ventanaOfertas">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">${ventanaOfertasISO}</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="S_obtenerOfertas" name="Obtener Ofertas Consolidadas (GET App Local)">
+      <bpmn:incoming>Flow_06</bpmn:incoming>
+      <bpmn:outgoing>Flow_07</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="S_validarNacional" name="Validar Ofertas en Sistema Nacional (API Cloud / JWT)">
+      <bpmn:incoming>Flow_07</bpmn:incoming>
+      <bpmn:outgoing>Flow_08</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="S_calcularCobertura" name="Calcular Cobertura de Lotes">
+      <bpmn:incoming>Flow_08</bpmn:incoming>
+      <bpmn:outgoing>Flow_09</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="GW_cobertura" name="Lotes cubiertos al 100%?" default="Flow_cob_si">
+      <bpmn:incoming>Flow_09</bpmn:incoming>
+      <bpmn:outgoing>Flow_cob_si</bpmn:outgoing>
+      <bpmn:outgoing>Flow_cob_no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="T_evaluarCobertura" name="Evaluar Cobertura Parcial y Decidir Curso de Accion">
+      <bpmn:incoming>Flow_cob_no</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_curso" name="Curso de accion">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_curso_reabrir</bpmn:outgoing>
+      <bpmn:outgoing>Flow_curso_reformular</bpmn:outgoing>
+      <bpmn:outgoing>Flow_curso_parcial</bpmn:outgoing>
+      <bpmn:outgoing>Flow_curso_cancelar</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_sinCobertura" name="Convocatoria cancelada sin cobertura">
+      <bpmn:incoming>Flow_curso_cancelar</bpmn:incoming>
+      <bpmn:terminateEventDefinition id="Term_End_sinCobertura" />
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="GW_mergeAdjudicacion">
+      <bpmn:incoming>Flow_cob_si</bpmn:incoming>
+      <bpmn:incoming>Flow_curso_parcial</bpmn:incoming>
+      <bpmn:outgoing>Flow_16</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="T_adjudicarOfertas" name="Seleccionar Ofertas Adjudicadas">
+      <bpmn:incoming>Flow_16</bpmn:incoming>
+      <bpmn:outgoing>Flow_17</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Bnd_timeoutAdjudicacion" name="Vencimiento plazo de adjudicacion" attachedToRef="T_adjudicarOfertas" cancelActivity="true">
+      <bpmn:outgoing>Flow_18</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TD_Bnd_timeoutAdjudicacion">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">${plazoAdjudicacionISO}</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="T_adjudicacionEscalada" name="Adjudicar por Escalamiento (Coordinador)">
+      <bpmn:incoming>Flow_18</bpmn:incoming>
+      <bpmn:outgoing>Flow_19</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_mergeNotif">
+      <bpmn:incoming>Flow_17</bpmn:incoming>
+      <bpmn:incoming>Flow_19</bpmn:incoming>
+      <bpmn:outgoing>Flow_20</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="S_notificarAdjudicacion" name="Notificar Adjudicacion a ONGs Seleccionadas">
+      <bpmn:incoming>Flow_20</bpmn:incoming>
+      <bpmn:outgoing>Flow_21</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="S_registrarCompromiso" name="Registrar Compromiso y Bloquear Recursos (API Cloud)">
+      <bpmn:incoming>Flow_21</bpmn:incoming>
+      <bpmn:outgoing>Flow_22</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="T_monitorearEjecucion" name="Monitorear Ejecucion del Despliegue">
+      <bpmn:incoming>Flow_22</bpmn:incoming>
+      <bpmn:outgoing>Flow_23</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="T_confirmarFinalizacion" name="Confirmar Finalizacion de Actividades">
+      <bpmn:incoming>Flow_23</bpmn:incoming>
+      <bpmn:outgoing>Flow_24</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics id="MI_T_confirmarFinalizacion" isSequential="false" />
+    </bpmn:userTask>
+    <bpmn:userTask id="T_validarCierre" name="Validar Cierre Operativo Bilateral">
+      <bpmn:incoming>Flow_24</bpmn:incoming>
+      <bpmn:outgoing>Flow_25</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="S_liberarRecursos" name="Liberar Recursos Comprometidos (API Cloud)">
+      <bpmn:incoming>Flow_25</bpmn:incoming>
+      <bpmn:outgoing>Flow_26</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="S_notificarCierre" name="Notificar Cierre a Participantes">
+      <bpmn:incoming>Flow_26</bpmn:incoming>
+      <bpmn:outgoing>Flow_27</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_emergenciaCerrada" name="Emergencia cerrada">
+      <bpmn:incoming>Flow_27</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="StartEmergencia" targetRef="T_registrarEmergencia" />
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="T_registrarEmergencia" targetRef="T_generarLotes" />
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="T_generarLotes" targetRef="T_publicarConvocatoria" />
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="T_publicarConvocatoria" targetRef="S_notificarRed" />
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="S_notificarRed" targetRef="Timer_ventanaOfertas" />
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Timer_ventanaOfertas" targetRef="S_obtenerOfertas" />
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="S_obtenerOfertas" targetRef="S_validarNacional" />
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="S_validarNacional" targetRef="S_calcularCobertura" />
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="S_calcularCobertura" targetRef="GW_cobertura" />
+    <bpmn:sequenceFlow id="Flow_cob_si" name="Si - cobertura total" sourceRef="GW_cobertura" targetRef="GW_mergeAdjudicacion" />
+    <bpmn:sequenceFlow id="Flow_cob_no" name="No - cobertura incompleta" sourceRef="GW_cobertura" targetRef="T_evaluarCobertura">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${coberturaCompleta == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="T_evaluarCobertura" targetRef="GW_curso" />
+    <bpmn:sequenceFlow id="Flow_curso_reabrir" name="Reabrir convocatoria" sourceRef="GW_curso" targetRef="T_publicarConvocatoria">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decisionCoordinador == &quot;REABRIR&quot;}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_curso_reformular" name="Reformular lotes" sourceRef="GW_curso" targetRef="T_generarLotes">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decisionCoordinador == &quot;REFORMULAR&quot;}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_curso_parcial" name="Continuar con cobertura parcial" sourceRef="GW_curso" targetRef="GW_mergeAdjudicacion">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decisionCoordinador == &quot;PARCIAL&quot;}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_curso_cancelar" name="Cancelar convocatoria" sourceRef="GW_curso" targetRef="End_sinCobertura">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${decisionCoordinador == &quot;CANCELAR&quot;}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="GW_mergeAdjudicacion" targetRef="T_adjudicarOfertas" />
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="T_adjudicarOfertas" targetRef="GW_mergeNotif" />
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Bnd_timeoutAdjudicacion" targetRef="T_adjudicacionEscalada" />
+    <bpmn:sequenceFlow id="Flow_19" sourceRef="T_adjudicacionEscalada" targetRef="GW_mergeNotif" />
+    <bpmn:sequenceFlow id="Flow_20" sourceRef="GW_mergeNotif" targetRef="S_notificarAdjudicacion" />
+    <bpmn:sequenceFlow id="Flow_21" sourceRef="S_notificarAdjudicacion" targetRef="S_registrarCompromiso" />
+    <bpmn:sequenceFlow id="Flow_22" sourceRef="S_registrarCompromiso" targetRef="T_monitorearEjecucion" />
+    <bpmn:sequenceFlow id="Flow_23" sourceRef="T_monitorearEjecucion" targetRef="T_confirmarFinalizacion" />
+    <bpmn:sequenceFlow id="Flow_24" sourceRef="T_confirmarFinalizacion" targetRef="T_validarCierre" />
+    <bpmn:sequenceFlow id="Flow_25" sourceRef="T_validarCierre" targetRef="S_liberarRecursos" />
+    <bpmn:sequenceFlow id="Flow_26" sourceRef="S_liberarRecursos" targetRef="S_notificarCierre" />
+    <bpmn:sequenceFlow id="Flow_27" sourceRef="S_notificarCierre" targetRef="End_emergenciaCerrada" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_RescueSync">
+    <bpmndi:BPMNPlane id="BPMNPlane_RescueSync" bpmnElement="Collaboration_RescueSync">
+      <bpmndi:BPMNShape id="Shape_Participant" bpmnElement="Participant_RescueSync" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="4430" height="720" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_muni" bpmnElement="Lane_muni" isHorizontal="true">
+        <dc:Bounds x="190" y="80" width="4400" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_ccr" bpmnElement="Lane_ccr" isHorizontal="true">
+        <dc:Bounds x="190" y="260" width="4400" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_ong" bpmnElement="Lane_ong" isHorizontal="true">
+        <dc:Bounds x="190" y="440" width="4400" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_sys" bpmnElement="Lane_sys" isHorizontal="true">
+        <dc:Bounds x="190" y="620" width="4400" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_StartEmergencia" bpmnElement="StartEmergencia">
+        <dc:Bounds x="242" y="152" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="200" y="194" width="120" height="26" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_registrarEmergencia" bpmnElement="T_registrarEmergencia">
+        <dc:Bounds x="380" y="134" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_generarLotes" bpmnElement="T_generarLotes">
+        <dc:Bounds x="560" y="314" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_publicarConvocatoria" bpmnElement="T_publicarConvocatoria">
+        <dc:Bounds x="740" y="314" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_S_notificarRed" bpmnElement="S_notificarRed">
+        <dc:Bounds x="920" y="674" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Timer_ventanaOfertas" bpmnElement="Timer_ventanaOfertas">
+        <dc:Bounds x="1142" y="692" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1100" y="734" width="120" height="26" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_S_obtenerOfertas" bpmnElement="S_obtenerOfertas">
+        <dc:Bounds x="1280" y="674" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_S_validarNacional" bpmnElement="S_validarNacional">
+        <dc:Bounds x="1460" y="674" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_S_calcularCobertura" bpmnElement="S_calcularCobertura">
+        <dc:Bounds x="1640" y="674" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_cobertura" bpmnElement="GW_cobertura">
+        <dc:Bounds x="1855" y="685" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1820" y="741" width="120" height="26" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_evaluarCobertura" bpmnElement="T_evaluarCobertura">
+        <dc:Bounds x="2000" y="314" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_curso" bpmnElement="GW_curso">
+        <dc:Bounds x="2215" y="325" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2180" y="381" width="120" height="26" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End_sinCobertura" bpmnElement="End_sinCobertura">
+        <dc:Bounds x="2402" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2360" y="374" width="120" height="26" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_mergeAdjudicacion" bpmnElement="GW_mergeAdjudicacion">
+        <dc:Bounds x="2395" y="145" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_adjudicarOfertas" bpmnElement="T_adjudicarOfertas">
+        <dc:Bounds x="2540" y="134" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Bnd_timeoutAdjudicacion" bpmnElement="Bnd_timeoutAdjudicacion">
+        <dc:Bounds x="2642" y="188" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2540" y="230" width="120" height="26" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_adjudicacionEscalada" bpmnElement="T_adjudicacionEscalada">
+        <dc:Bounds x="2720" y="314" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_GW_mergeNotif" bpmnElement="GW_mergeNotif">
+        <dc:Bounds x="2935" y="685" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_S_notificarAdjudicacion" bpmnElement="S_notificarAdjudicacion">
+        <dc:Bounds x="3080" y="674" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_S_registrarCompromiso" bpmnElement="S_registrarCompromiso">
+        <dc:Bounds x="3260" y="674" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_monitorearEjecucion" bpmnElement="T_monitorearEjecucion">
+        <dc:Bounds x="3440" y="314" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_confirmarFinalizacion" bpmnElement="T_confirmarFinalizacion">
+        <dc:Bounds x="3620" y="494" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_validarCierre" bpmnElement="T_validarCierre">
+        <dc:Bounds x="3800" y="314" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_S_liberarRecursos" bpmnElement="S_liberarRecursos">
+        <dc:Bounds x="3980" y="674" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_S_notificarCierre" bpmnElement="S_notificarCierre">
+        <dc:Bounds x="4160" y="674" width="120" height="72" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End_emergenciaCerrada" bpmnElement="End_emergenciaCerrada">
+        <dc:Bounds x="4382" y="692" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="4340" y="734" width="120" height="26" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_Flow_01" bpmnElement="Flow_01">
+        <di:waypoint x="278" y="170" />
+        <di:waypoint x="380" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_02" bpmnElement="Flow_02">
+        <di:waypoint x="500" y="170" />
+        <di:waypoint x="530" y="170" />
+        <di:waypoint x="530" y="350" />
+        <di:waypoint x="560" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_03" bpmnElement="Flow_03">
+        <di:waypoint x="680" y="350" />
+        <di:waypoint x="740" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_04" bpmnElement="Flow_04">
+        <di:waypoint x="860" y="350" />
+        <di:waypoint x="890" y="350" />
+        <di:waypoint x="890" y="710" />
+        <di:waypoint x="920" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_05" bpmnElement="Flow_05">
+        <di:waypoint x="1040" y="710" />
+        <di:waypoint x="1142" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_06" bpmnElement="Flow_06">
+        <di:waypoint x="1178" y="710" />
+        <di:waypoint x="1280" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_07" bpmnElement="Flow_07">
+        <di:waypoint x="1400" y="710" />
+        <di:waypoint x="1460" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_08" bpmnElement="Flow_08">
+        <di:waypoint x="1580" y="710" />
+        <di:waypoint x="1640" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_09" bpmnElement="Flow_09">
+        <di:waypoint x="1760" y="710" />
+        <di:waypoint x="1855" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_cob_si" bpmnElement="Flow_cob_si">
+        <di:waypoint x="1905" y="710" />
+        <di:waypoint x="2150" y="710" />
+        <di:waypoint x="2150" y="170" />
+        <di:waypoint x="2395" y="170" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2095" y="140" width="110" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_cob_no" bpmnElement="Flow_cob_no">
+        <di:waypoint x="1905" y="710" />
+        <di:waypoint x="1952" y="710" />
+        <di:waypoint x="1952" y="350" />
+        <di:waypoint x="2000" y="350" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1897" y="320" width="110" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_11" bpmnElement="Flow_11">
+        <di:waypoint x="2120" y="350" />
+        <di:waypoint x="2215" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_curso_reabrir" bpmnElement="Flow_curso_reabrir">
+        <di:waypoint x="2240" y="375" />
+        <di:waypoint x="2240" y="884" />
+        <di:waypoint x="800" y="884" />
+        <di:waypoint x="800" y="386" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="745" y="854" width="110" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_curso_reformular" bpmnElement="Flow_curso_reformular">
+        <di:waypoint x="2240" y="375" />
+        <di:waypoint x="2240" y="884" />
+        <di:waypoint x="620" y="884" />
+        <di:waypoint x="620" y="386" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="565" y="854" width="110" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_curso_parcial" bpmnElement="Flow_curso_parcial">
+        <di:waypoint x="2265" y="350" />
+        <di:waypoint x="2330" y="350" />
+        <di:waypoint x="2330" y="170" />
+        <di:waypoint x="2395" y="170" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2275" y="140" width="110" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_curso_cancelar" bpmnElement="Flow_curso_cancelar">
+        <di:waypoint x="2265" y="350" />
+        <di:waypoint x="2402" y="350" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2347" y="320" width="110" height="24" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_16" bpmnElement="Flow_16">
+        <di:waypoint x="2445" y="170" />
+        <di:waypoint x="2540" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_17" bpmnElement="Flow_17">
+        <di:waypoint x="2660" y="170" />
+        <di:waypoint x="2797" y="170" />
+        <di:waypoint x="2797" y="710" />
+        <di:waypoint x="2935" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_18" bpmnElement="Flow_18">
+        <di:waypoint x="2600" y="224" />
+        <di:waypoint x="2600" y="350" />
+        <di:waypoint x="2720" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_19" bpmnElement="Flow_19">
+        <di:waypoint x="2840" y="350" />
+        <di:waypoint x="2887" y="350" />
+        <di:waypoint x="2887" y="710" />
+        <di:waypoint x="2935" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_20" bpmnElement="Flow_20">
+        <di:waypoint x="2985" y="710" />
+        <di:waypoint x="3080" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_21" bpmnElement="Flow_21">
+        <di:waypoint x="3200" y="710" />
+        <di:waypoint x="3260" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_22" bpmnElement="Flow_22">
+        <di:waypoint x="3380" y="710" />
+        <di:waypoint x="3410" y="710" />
+        <di:waypoint x="3410" y="350" />
+        <di:waypoint x="3440" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_23" bpmnElement="Flow_23">
+        <di:waypoint x="3560" y="350" />
+        <di:waypoint x="3590" y="350" />
+        <di:waypoint x="3590" y="530" />
+        <di:waypoint x="3620" y="530" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_24" bpmnElement="Flow_24">
+        <di:waypoint x="3740" y="530" />
+        <di:waypoint x="3770" y="530" />
+        <di:waypoint x="3770" y="350" />
+        <di:waypoint x="3800" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_25" bpmnElement="Flow_25">
+        <di:waypoint x="3920" y="350" />
+        <di:waypoint x="3950" y="350" />
+        <di:waypoint x="3950" y="710" />
+        <di:waypoint x="3980" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_26" bpmnElement="Flow_26">
+        <di:waypoint x="4100" y="710" />
+        <di:waypoint x="4160" y="710" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Flow_27" bpmnElement="Flow_27">
+        <di:waypoint x="4280" y="710" />
+        <di:waypoint x="4382" y="710" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

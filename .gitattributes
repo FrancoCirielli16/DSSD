@@ -1,0 +1,4 @@
+# Bonita archives are zip containers: never diff or auto-merge them.
+# A textual merge would silently corrupt the archive.
+*.bos binary
+*.bar binary

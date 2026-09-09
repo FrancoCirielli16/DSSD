@@ -57,20 +57,40 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
     <bpmn:userTask id="T_registrarEmergencia" name="Registrar Emergencia">
       <bpmn:incoming>Flow_01</bpmn:incoming>
       <bpmn:outgoing>Flow_02</bpmn:outgoing>
+      <bpmn:performer id="Perf_T_registrarEmergencia" name="OperadorMunicipal">
+        <bpmn:resourceAssignmentExpression id="RAE_T_registrarEmergencia">
+          <bpmn:formalExpression id="FE_T_registrarEmergencia">OperadorMunicipal</bpmn:formalExpression>
+        </bpmn:resourceAssignmentExpression>
+      </bpmn:performer>
     </bpmn:userTask>
     <bpmn:userTask id="T_generarLotes" name="Revisar Informacion y Generar Lotes de Necesidades">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:incoming>Flow_curso_reformular</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
+      <bpmn:performer id="Perf_T_generarLotes" name="CentroCoordinador">
+        <bpmn:resourceAssignmentExpression id="RAE_T_generarLotes">
+          <bpmn:formalExpression id="FE_T_generarLotes">CentroCoordinador</bpmn:formalExpression>
+        </bpmn:resourceAssignmentExpression>
+      </bpmn:performer>
     </bpmn:userTask>
     <bpmn:userTask id="T_publicarConvocatoria" name="Publicar Convocatoria y Notificar a la Red de ONGs">
       <bpmn:incoming>Flow_03</bpmn:incoming>
       <bpmn:incoming>Flow_curso_ampliar</bpmn:incoming>
       <bpmn:outgoing>Flow_04</bpmn:outgoing>
+      <bpmn:performer id="Perf_T_publicarConvocatoria" name="CentroCoordinador">
+        <bpmn:resourceAssignmentExpression id="RAE_T_publicarConvocatoria">
+          <bpmn:formalExpression id="FE_T_publicarConvocatoria">CentroCoordinador</bpmn:formalExpression>
+        </bpmn:resourceAssignmentExpression>
+      </bpmn:performer>
     </bpmn:userTask>
     <bpmn:userTask id="T_cargarOfertas" name="Cargar Ofertas de Ayuda">
       <bpmn:incoming>Flow_04</bpmn:incoming>
       <bpmn:outgoing>Flow_05</bpmn:outgoing>
+      <bpmn:performer id="Perf_T_cargarOfertas" name="ONG">
+        <bpmn:resourceAssignmentExpression id="RAE_T_cargarOfertas">
+          <bpmn:formalExpression id="FE_T_cargarOfertas">ONG</bpmn:formalExpression>
+        </bpmn:resourceAssignmentExpression>
+      </bpmn:performer>
     </bpmn:userTask>
     <bpmn:boundaryEvent id="Bnd_ventanaOfertas" name="Cierre de la ventana de recepcion de ofertas" attachedToRef="T_cargarOfertas" cancelActivity="true">
       <bpmn:outgoing>Flow_06</bpmn:outgoing>
@@ -95,6 +115,11 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
     <bpmn:userTask id="T_evaluarCobertura" name="Evaluar Cobertura y Definir Curso de Accion">
       <bpmn:incoming>Flow_cob_no</bpmn:incoming>
       <bpmn:outgoing>Flow_11</bpmn:outgoing>
+      <bpmn:performer id="Perf_T_evaluarCobertura" name="CentroCoordinador">
+        <bpmn:resourceAssignmentExpression id="RAE_T_evaluarCobertura">
+          <bpmn:formalExpression id="FE_T_evaluarCobertura">CentroCoordinador</bpmn:formalExpression>
+        </bpmn:resourceAssignmentExpression>
+      </bpmn:performer>
     </bpmn:userTask>
     <bpmn:exclusiveGateway id="GW_curso" name="Curso de accion" default="Flow_curso_ampliar">
       <bpmn:incoming>Flow_11</bpmn:incoming>
@@ -106,6 +131,11 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
       <bpmn:incoming>Flow_cob_si</bpmn:incoming>
       <bpmn:incoming>Flow_curso_parcial</bpmn:incoming>
       <bpmn:outgoing>Flow_15</bpmn:outgoing>
+      <bpmn:performer id="Perf_T_adjudicarOfertas" name="OperadorMunicipal">
+        <bpmn:resourceAssignmentExpression id="RAE_T_adjudicarOfertas">
+          <bpmn:formalExpression id="FE_T_adjudicarOfertas">OperadorMunicipal</bpmn:formalExpression>
+        </bpmn:resourceAssignmentExpression>
+      </bpmn:performer>
     </bpmn:userTask>
     <bpmn:serviceTask id="S_compromiso" name="Notificar Adjudicacion y Registrar Compromiso Nacional">
       <bpmn:incoming>Flow_15</bpmn:incoming>
@@ -114,15 +144,30 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
     <bpmn:userTask id="T_monitorearEjecucion" name="Monitorear Ejecucion del Despliegue">
       <bpmn:incoming>Flow_16</bpmn:incoming>
       <bpmn:outgoing>Flow_17</bpmn:outgoing>
+      <bpmn:performer id="Perf_T_monitorearEjecucion" name="CentroCoordinador">
+        <bpmn:resourceAssignmentExpression id="RAE_T_monitorearEjecucion">
+          <bpmn:formalExpression id="FE_T_monitorearEjecucion">CentroCoordinador</bpmn:formalExpression>
+        </bpmn:resourceAssignmentExpression>
+      </bpmn:performer>
     </bpmn:userTask>
     <bpmn:userTask id="T_confirmarFinalizacion" name="Confirmar Finalizacion de Actividades">
       <bpmn:incoming>Flow_17</bpmn:incoming>
       <bpmn:outgoing>Flow_18</bpmn:outgoing>
+      <bpmn:performer id="Perf_T_confirmarFinalizacion" name="ONG">
+        <bpmn:resourceAssignmentExpression id="RAE_T_confirmarFinalizacion">
+          <bpmn:formalExpression id="FE_T_confirmarFinalizacion">ONG</bpmn:formalExpression>
+        </bpmn:resourceAssignmentExpression>
+      </bpmn:performer>
       <bpmn:multiInstanceLoopCharacteristics id="MI_T_confirmarFinalizacion" isSequential="false" />
     </bpmn:userTask>
     <bpmn:userTask id="T_validarCierre" name="Validar Cierre Operativo Bilateral">
       <bpmn:incoming>Flow_18</bpmn:incoming>
       <bpmn:outgoing>Flow_19</bpmn:outgoing>
+      <bpmn:performer id="Perf_T_validarCierre" name="CentroCoordinador">
+        <bpmn:resourceAssignmentExpression id="RAE_T_validarCierre">
+          <bpmn:formalExpression id="FE_T_validarCierre">CentroCoordinador</bpmn:formalExpression>
+        </bpmn:resourceAssignmentExpression>
+      </bpmn:performer>
     </bpmn:userTask>
     <bpmn:serviceTask id="S_liberarCierre" name="Liberar Recursos y Notificar Cierre">
       <bpmn:incoming>Flow_19</bpmn:incoming>

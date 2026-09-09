@@ -8,11 +8,11 @@
                   targetNamespace="http://rescuesync.dssd.2026"
                   exporter="RescueSync" exporterVersion="1.0">
   <bpmn:collaboration id="Collaboration_RescueSync">
-    <bpmn:participant id="Participant_RescueSync" name="RescueSync - Gestion Integral de la Emergencia" processRef="Process_RescueSync" />
+    <bpmn:participant id="Participant_RescueSync" name="RescueSync - Gestión Integral de la Emergencia" processRef="Process_RescueSync" />
   </bpmn:collaboration>
-  <bpmn:process id="Process_RescueSync" name="Gestion Integral de la Emergencia" isExecutable="true">
-    <bpmn:documentation>Proceso de orquestacion del ciclo de vida completo de una emergencia en RescueSync.
-Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion):
+  <bpmn:process id="Process_RescueSync" name="Gestión Integral de la Emergencia" isExecutable="true">
+    <bpmn:documentation>Proceso de orquestación del ciclo de vida completo de una emergencia en RescueSync.
+Variables de proceso esperadas (definirlas en Bonita Studio tras la importación):
   - emergenciaId : java.lang.Long
   - municipioId : java.lang.Long
   - nivelGravedad : java.lang.String
@@ -63,7 +63,7 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
         </bpmn:resourceAssignmentExpression>
       </bpmn:performer>
     </bpmn:userTask>
-    <bpmn:userTask id="T_generarLotes" name="Revisar Informacion y Generar Lotes de Necesidades">
+    <bpmn:userTask id="T_generarLotes" name="Revisar Información y Generar Lotes de Necesidades">
       <bpmn:incoming>Flow_02</bpmn:incoming>
       <bpmn:incoming>Flow_curso_reformular</bpmn:incoming>
       <bpmn:outgoing>Flow_03</bpmn:outgoing>
@@ -92,7 +92,7 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
         </bpmn:resourceAssignmentExpression>
       </bpmn:performer>
     </bpmn:userTask>
-    <bpmn:boundaryEvent id="Bnd_ventanaOfertas" name="Cierre de la ventana de recepcion de ofertas" attachedToRef="T_cargarOfertas" cancelActivity="true">
+    <bpmn:boundaryEvent id="Bnd_ventanaOfertas" name="Cierre de la ventana de recepción de ofertas" attachedToRef="T_cargarOfertas" cancelActivity="true">
       <bpmn:outgoing>Flow_06</bpmn:outgoing>
       <bpmn:timerEventDefinition id="TD_Bnd_ventanaOfertas">
         <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">${ventanaOfertasISO}</bpmn:timeDuration>
@@ -107,12 +107,12 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
       <bpmn:incoming>Flow_07</bpmn:incoming>
       <bpmn:outgoing>Flow_08</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:exclusiveGateway id="GW_cobertura" name="Se cubrieron todos los lotes?" default="Flow_cob_si">
+    <bpmn:exclusiveGateway id="GW_cobertura" name="¿Se cubrieron todos los lotes?" default="Flow_cob_si">
       <bpmn:incoming>Flow_08</bpmn:incoming>
       <bpmn:outgoing>Flow_cob_si</bpmn:outgoing>
       <bpmn:outgoing>Flow_cob_no</bpmn:outgoing>
     </bpmn:exclusiveGateway>
-    <bpmn:userTask id="T_evaluarCobertura" name="Evaluar Cobertura y Definir Curso de Accion">
+    <bpmn:userTask id="T_evaluarCobertura" name="Evaluar Cobertura y Definir Curso de Acción">
       <bpmn:incoming>Flow_cob_no</bpmn:incoming>
       <bpmn:outgoing>Flow_11</bpmn:outgoing>
       <bpmn:performer id="Perf_T_evaluarCobertura" name="CentroCoordinador">
@@ -121,7 +121,7 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
         </bpmn:resourceAssignmentExpression>
       </bpmn:performer>
     </bpmn:userTask>
-    <bpmn:exclusiveGateway id="GW_curso" name="Curso de accion" default="Flow_curso_ampliar">
+    <bpmn:exclusiveGateway id="GW_curso" name="¿Qué curso de acción?" default="Flow_curso_ampliar">
       <bpmn:incoming>Flow_11</bpmn:incoming>
       <bpmn:outgoing>Flow_curso_ampliar</bpmn:outgoing>
       <bpmn:outgoing>Flow_curso_reformular</bpmn:outgoing>
@@ -137,11 +137,11 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
         </bpmn:resourceAssignmentExpression>
       </bpmn:performer>
     </bpmn:userTask>
-    <bpmn:serviceTask id="S_compromiso" name="Notificar Adjudicacion y Registrar Compromiso Nacional">
+    <bpmn:serviceTask id="S_compromiso" name="Notificar Adjudicación y Registrar Compromiso Nacional">
       <bpmn:incoming>Flow_15</bpmn:incoming>
       <bpmn:outgoing>Flow_16</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:userTask id="T_monitorearEjecucion" name="Monitorear Ejecucion del Despliegue">
+    <bpmn:userTask id="T_monitorearEjecucion" name="Monitorear Ejecución del Despliegue">
       <bpmn:incoming>Flow_16</bpmn:incoming>
       <bpmn:outgoing>Flow_17</bpmn:outgoing>
       <bpmn:performer id="Perf_T_monitorearEjecucion" name="CentroCoordinador">
@@ -150,7 +150,7 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
         </bpmn:resourceAssignmentExpression>
       </bpmn:performer>
     </bpmn:userTask>
-    <bpmn:userTask id="T_confirmarFinalizacion" name="Confirmar Finalizacion de Actividades">
+    <bpmn:userTask id="T_confirmarFinalizacion" name="Confirmar Finalización de Actividades">
       <bpmn:incoming>Flow_17</bpmn:incoming>
       <bpmn:outgoing>Flow_18</bpmn:outgoing>
       <bpmn:performer id="Perf_T_confirmarFinalizacion" name="ONG">
@@ -184,7 +184,7 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
     <bpmn:sequenceFlow id="Flow_06" name="Vence la ventana" sourceRef="Bnd_ventanaOfertas" targetRef="S_obtenerOfertas" />
     <bpmn:sequenceFlow id="Flow_07" sourceRef="S_obtenerOfertas" targetRef="S_validarCobertura" />
     <bpmn:sequenceFlow id="Flow_08" sourceRef="S_validarCobertura" targetRef="GW_cobertura" />
-    <bpmn:sequenceFlow id="Flow_cob_si" name="Si - lotes cubiertos" sourceRef="GW_cobertura" targetRef="T_adjudicarOfertas" />
+    <bpmn:sequenceFlow id="Flow_cob_si" name="Sí - lotes cubiertos" sourceRef="GW_cobertura" targetRef="T_adjudicarOfertas" />
     <bpmn:sequenceFlow id="Flow_cob_no" name="No - cobertura incompleta" sourceRef="GW_cobertura" targetRef="T_evaluarCobertura">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${coberturaCompleta == false}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>

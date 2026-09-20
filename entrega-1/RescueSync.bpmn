@@ -10,11 +10,27 @@ Variables de proceso esperadas (definirlas en Bonita Studio tras la importacion)
   - municipioId : java.lang.Long
   - nivelGravedad : java.lang.String
   - ventanaOfertasISO : java.lang.String
+  - plazoAdjudicacionISO : java.lang.String (declarada, sin uso en el modelo actual)
   - coberturaCompleta : java.lang.Boolean
   - porcentajeCobertura : java.lang.Double
   - decisionCoordinador : java.lang.String
   - ofertasJson : java.lang.String
   - ongsAdjudicadas : java.lang.String
+
+Contrato de instanciacion (congelado 13/09/2026, ver entrega-1/contrato-instanciacion.md):
+  Inputs obligatorios -> operation Set variable homonima:
+    - emergenciaId : Long
+    - municipioId : Long
+    - nivelGravedad : Text  (BAJO | MEDIO | ALTO)
+    - ventanaOfertasISO : Text  (ISO-8601 con offset, ej. 2026-09-13T20:00:00-03:00)
+  El resto de las variables son internas, arrancan con default
+  (coberturaCompleta=false, porcentajeCobertura=0.0, decisionCoordinador="",
+  ofertasJson="[]", ongsAdjudicadas="[]", plazoAdjudicacionISO="") y las
+  setean los nodos del proceso, no el contrato.
+
+  El boundary timer de "Cargar Ofertas de Ayuda" debe leer ventanaOfertasISO:
+    Date.from(java.time.OffsetDateTime.parse(ventanaOfertasISO).toInstant())
+  reemplazando cualquier fecha absoluta hardcodeada.
 
 ]]></model:documentation>
     <model:ioSpecification id="_xsHRMKyoEfGR3cB9VRwXjA">

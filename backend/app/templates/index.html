@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3">Hola, {{ user.nombre }}</h1>
+<p class="text-muted">Perfil: {{ rol_label[user.rol.value] }}</p>
+<div class="list-group">
+  {% for titulo, href in menu %}
+    {% if href %}
+      <a class="list-group-item list-group-item-action" href="{{ href }}">{{ titulo }}</a>
+    {% else %}
+      <span class="list-group-item disabled">{{ titulo }} <small>(próximamente)</small></span>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}

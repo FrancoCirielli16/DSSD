@@ -4,14 +4,13 @@ a mano (o desde un script) el arranque de una instancia de RescueSync
 y el seteo de sus variables de proceso -- exactamente lo que pide
 HU-2.4 / T-07 / T-08 de la Entrega 2.
 
-IMPORTANTE - esto es un punto de partida, no una solucion verificada:
-no hay forma de correr Bonita Studio/Engine desde esta sesion para
-probarlo contra un servidor real, asi que los endpoints estan armados
-siguiendo la documentacion oficial de Bonita (login + CSRF, resolucion
-de processDefinitionId, instantiation, caseVariable, humanTask) pero
-no fueron ejecutados contra tu instancia local. Correlo, mira los
-errores reales que tire Bonita, y ajustalo -- es justo el ejercicio de
-"investigar los problemas de conexion" que quieren hacer este finde.
+Verificado el 19/09/2026 contra el Bonita embebido de Studio 10.4.0
+(localhost:8080, usuario walter.bates/bpm): login + CSRF, resolucion de
+processDefinitionId, instanciacion con los 4 inputs del contrato y lectura
+de tareas funcionan, y tambien set_case_variable (PUT caseVariable) y
+avanzar tareas humanas (PUT userTask assigned_id + POST execution).
+Ojo: listar tareas necesita p y c; la primera tarea aparece con un
+instante de retraso.
 
 Requisitos: pip install requests
 
@@ -28,6 +27,7 @@ servidor embebido de Studio, tipicamente localhost:8080/bonita):
 
 import argparse
 import sys
+import time
 
 import requests
 
@@ -141,7 +141,7 @@ class BonitaClient:
         """GET /API/bpm/humanTask?f=caseId=... -- para ver en que tarea quedo el caso."""
         resp = self.session.get(
             f"{self.base_url}/API/bpm/humanTask",
-            params={"f": f"caseId={case_id}"},
+            params={"f": f"caseId={case_id}", "p": 0, "c": 100},
         )
         resp.raise_for_status()
         return resp.json()
@@ -152,7 +152,7 @@ def main():
     parser.add_argument("--base-url", required=True, help="ej: http://localhost:8080/bonita")
     parser.add_argument("--username", required=True)
     parser.add_argument("--password", required=True)
-    parser.add_argument("--process-name", default="RescueSync")
+    parser.add_argument("--process-name", default="Gestion Integral de la Emergencia")
     parser.add_argument("--process-version", default="1.0")
     parser.add_argument("--emergencia-id", type=int, required=True)
     parser.add_argument("--municipio-id", type=int, required=True)
@@ -185,7 +185,13 @@ def main():
     print(f"caseId = {case_id}")
 
     print("Tareas humanas abiertas para este caso:")
-    for task in client.get_human_tasks(case_id):
+    tasks = []
+    for _ in range(10):  # el motor crea la primera tarea de forma asincrona
+        tasks = client.get_human_tasks(case_id)
+        if tasks:
+            break
+        time.sleep(0.5)
+    for task in tasks:
         print(f"  - {task.get('name')} (id={task.get('id')}, estado={task.get('state')})")
 
 

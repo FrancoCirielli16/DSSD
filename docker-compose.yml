@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: rescuesync-db
+    environment:
+      POSTGRES_USER: rescuesync
+      POSTGRES_PASSWORD: rescuesync
+      POSTGRES_DB: rescuesync
+    ports:
+      - "5433:5432"
+    volumes:
+      - rescuesync_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rescuesync -d rescuesync"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  rescuesync_pg:

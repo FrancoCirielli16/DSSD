@@ -5,3 +5,20 @@ CLAUDE.md
 # Documentacion de trabajo interna (no se entrega)
 entrega-1/*.md
 .claude/
+
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.env
+*.pyc
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

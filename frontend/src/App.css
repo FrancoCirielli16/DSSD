@@ -1,0 +1,90 @@
+:root {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: #1c2430;
+  background: #eef2f6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.wrap {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #d7dee8;
+  padding: 1rem 1.1rem;
+  margin: 1rem 0;
+}
+
+.grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+}
+
+textarea {
+  min-height: 80px;
+}
+
+button {
+  cursor: pointer;
+  background: #1f4b7a;
+  color: #fff;
+  border: 0;
+}
+
+button.linkish {
+  background: transparent;
+  color: #1f4b7a;
+  padding: 0;
+  text-align: left;
+  font-weight: 600;
+}
+
+.muted {
+  color: #5b6777;
+  font-size: 0.92rem;
+}
+
+.error {
+  color: #9b1c1c;
+  background: #fdecec;
+  padding: 0.6rem 0.8rem;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}

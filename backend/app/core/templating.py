@@ -36,6 +36,17 @@ def fecha(dt: datetime | None) -> str:
     return dt.astimezone().strftime("%d/%m/%Y %H:%M")
 
 
+ISLANDS_BUNDLE = BASE_DIR / "static" / "islands" / "islands.js"
+
+
+def islands_version() -> int | None:
+    """mtime del bundle de React (sirve para invalidar la caché del navegador), o None si no se compiló."""
+    try:
+        return int(ISLANDS_BUNDLE.stat().st_mtime)
+    except FileNotFoundError:
+        return None
+
+
 def _session_context(request: Request) -> dict:
     # Solo para mostrar en la barra; la autorización real la hace core/deps.py contra la BD.
     s = request.session
@@ -45,3 +56,4 @@ def _session_context(request: Request) -> dict:
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"), context_processors=[_session_context])
 templates.env.filters["fecha"] = fecha
+templates.env.globals["islands_version"] = islands_version

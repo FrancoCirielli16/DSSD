@@ -7,7 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import get_settings
 from app.core.templating import BASE_DIR, templates
-from app.routers import auth, emergencias, lotes, pages
+from app.routers import api, auth, emergencias, lotes, pages
 
 settings = get_settings()
 
@@ -16,6 +16,7 @@ app.add_middleware(
     SessionMiddleware, secret_key=settings.session_secret, same_site="lax", max_age=8 * 3600
 )
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+app.include_router(api.router)
 app.include_router(auth.router)
 app.include_router(emergencias.router)
 app.include_router(lotes.router)

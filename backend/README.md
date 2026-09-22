@@ -60,6 +60,24 @@ Qué protegen:
 
 Regla: cada pieza nueva (endpoint, pantalla, servicio) entra con sus tests.
 
+## End-to-end automático (T-14)
+
+`scripts/e2e.py` recorre el flujo completo con los cinco usuarios de demo contra la app
+y Bonita **reales**, y verifica los dos lados: lo que muestra la pantalla y en qué tarea
+quedó el caso. Necesita Studio con el proceso desplegado, la base migrada + seedeada y
+`uvicorn app.main:app` corriendo.
+
+```bash
+python scripts/e2e.py                 # 47 verificaciones, ~30 s
+python scripts/e2e.py --timer 90      # + espera a que dispare el boundary timer (~3 min)
+```
+
+Cubre: acceso anónimo, login y los 403 de cada rol, alta de emergencia (y que recargar
+no la duplique), contrato en las variables del caso, carga/borrado/validación de lotes,
+publicación (ventana inválida, ventana guardada en Bonita, inmutabilidad posterior),
+visibilidad de la convocatoria para las ONGs, consulta del Auditor y logout. Con
+`--timer`, además, que el motor cierre solo la ventana y avance a `Evaluar Cobertura…`.
+
 ## Login y roles (T-04)
 
 Sesión por cookie firmada (`SESSION_SECRET`). Usuarios de demo (`python -m app.seed`,

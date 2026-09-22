@@ -21,8 +21,9 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def bonita():
-    s = Settings(_env_file=None)
-    c = BonitaClient(s.bonita_base_url)
+    # conftest.py apunta BONITA_BASE_URL a un host falso para el resto de los tests.
+    s = Settings(_env_file=None, bonita_base_url=os.getenv("BONITA_INTEGRATION_URL", "http://localhost:8080/bonita"))
+    c = BonitaClient(s.bonita_base_url, s.bonita_timeout_seconds)
     c.login(s.bonita_username, s.bonita_password)
     c.process_id = c.resolve_process_id(s.bonita_process_name, s.bonita_process_version)
     return c

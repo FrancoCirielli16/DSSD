@@ -23,9 +23,11 @@ app.include_router(pages.router)
 
 @app.exception_handler(StarletteHTTPException)
 async def http_error(request: Request, exc: StarletteHTTPException):
-    """Páginas: 401 → login, 403 → pantalla de acceso denegado. /api/* mantiene JSON."""
-    if request.url.path.startswith("/api") or exc.status_code not in (401, 403):
+    """Páginas: 401 → login, 403/404 → pantalla de aviso. /api/* mantiene JSON."""
+    if request.url.path.startswith("/api") or exc.status_code not in (401, 403, 404):
         return await http_exception_handler(request, exc)
     if exc.status_code == 401:
         return RedirectResponse("/login", status_code=303)
-    return templates.TemplateResponse(request, "forbidden.html", {"detail": exc.detail}, status_code=403)
+    return templates.TemplateResponse(
+        request, "forbidden.html", {"detail": exc.detail}, status_code=exc.status_code
+    )

@@ -11,11 +11,31 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import requests
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.integrations.bonita import BONITA_TEST_USERS, BonitaClient, BonitaError
-from app.models import Emergencia, Gravedad, Usuario
+from app.models import Emergencia, EstadoEmergencia, Gravedad, Rol, Usuario
+
+
+def _filtro_visibilidad(user: Usuario):
+    """Qué emergencias ve cada perfil. Coordinador y Auditor ven todas."""
+    if user.rol is Rol.MUNICIPIO:
+        return Emergencia.municipio_id == user.municipio_id
+    if user.rol is Rol.ONG:
+        return Emergencia.estado == EstadoEmergencia.CONVOCATORIA
+    return True
+
+
+def emergencias_visibles(db: Session, user: Usuario) -> list[Emergencia]:
+    return list(db.scalars(
+        select(Emergencia).where(_filtro_visibilidad(user)).order_by(Emergencia.id.desc())
+    ))
+
+
+def emergencia_visible(db: Session, user: Usuario, emergencia_id: int) -> Emergencia | None:
+    return db.scalar(select(Emergencia).where(Emergencia.id == emergencia_id, _filtro_visibilidad(user)))
 
 
 class AltaEmergenciaError(RuntimeError):

@@ -533,6 +533,9 @@ button, input, select, textarea { font: inherit; }
   pointer-events: none;
   display: block;
 }
+.flow-destination-img {
+  filter: saturate(1.05) contrast(1.03);
+}
 .flow-destination {
   z-index: 2;
 }

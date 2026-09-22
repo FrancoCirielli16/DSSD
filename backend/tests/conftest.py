@@ -3,6 +3,7 @@ import os
 # Antes de importar la app: que ningún test toque dev.db ni un Postgres real.
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["SESSION_SECRET"] = "test-secret"
+os.environ["BONITA_BASE_URL"] = "http://bonita.test/bonita"  # nunca pegarle a un Bonita real en los tests
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -15,6 +16,14 @@ from app.main import app  # noqa: E402
 from app.seed import DEMO_PASSWORD, seed  # noqa: E402
 
 PASSWORD = DEMO_PASSWORD
+
+
+@pytest.fixture(autouse=True)
+def _bonita_sin_espera(monkeypatch):
+    """Los reintentos de get_human_tasks no deben hacer esperar a los tests."""
+    from app.integrations import bonita as bonita_mod
+
+    monkeypatch.setattr(bonita_mod.time, "sleep", lambda s: None)
 
 
 @pytest.fixture

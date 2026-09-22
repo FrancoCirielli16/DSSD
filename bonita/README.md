@@ -1,5 +1,10 @@
 # Automatizacion de Bonita para RescueSync
 
+> **Desactualizado en un punto:** la organización que realmente se usa hoy es
+> `entrega-2/ACME.xml` (ACME editada de forma aditiva), no
+> `organizations/RescueSyncOrg.xml` de más abajo. Los pasos de instalación
+> completos y vigentes están en el `README.md` de la raíz del repo.
+
 Este folder junta todo lo que se puede automatizar alrededor de Bonita
 Studio/Engine para la Entrega 2. Resumen de la investigacion (ver fuentes
 al final):

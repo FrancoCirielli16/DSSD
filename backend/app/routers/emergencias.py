@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -55,7 +55,8 @@ def crear_emergencia(
     except AltaEmergenciaError as exc:
         return _form(request, str(exc), status_code=502)
 
-    return templates.TemplateResponse(request, "emergencia_creada.html", {"emergencia": emergencia})
+    # 303 → GET: si el usuario recarga, no se reenvía el formulario (evita emergencia y caso duplicados).
+    return RedirectResponse(f"/emergencias/{emergencia.id}?nueva=1", status_code=303)
 
 
 @router.get("/emergencias", response_class=HTMLResponse)

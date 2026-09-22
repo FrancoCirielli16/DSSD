@@ -3,7 +3,8 @@
 {% block content %}
 <h1 class="h4 mb-3">Registrar emergencia</h1>
 {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
-<form method="post" action="/emergencias/nueva" class="col-md-7">
+<form method="post" action="/emergencias/nueva" class="col-md-7"
+      onsubmit="this.querySelector('[type=submit]').disabled = true">
   <div class="mb-3">
     <label class="form-label" for="tipo">Tipo</label>
     <select class="form-select" id="tipo" name="tipo" required>

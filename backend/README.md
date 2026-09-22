@@ -12,7 +12,7 @@ python -m venv .venv
 pip install -r requirements.txt
 copy .env.example .env          # ajustar valores si hace falta
 alembic upgrade head            # crea las tablas
-python -m app.seed              # datos de demo (4 perfiles, pass: demo1234)
+python -m app.seed              # datos de demo (4 perfiles, 2 ONGs, pass: demo1234)
 uvicorn app.main:app --reload
 ```
 
@@ -64,7 +64,8 @@ Regla: cada pieza nueva (endpoint, pantalla, servicio) entra con sus tests.
 ## Login y roles (T-04)
 
 Sesión por cookie firmada (`SESSION_SECRET`). Usuarios de demo (`python -m app.seed`,
-pass `demo1234`): `operador.municipal`, `coordinador.regional`, `ong.cruzroja`, `auditor`.
+pass `demo1234`): `operador.municipal`, `coordinador.regional`, `ong.cruzroja`, `ong.bomberos`,
+`auditor`. Con `SHOW_DEMO_USERS=true` en `.env` el login los lista (solo desarrollo).
 
 Proteger una ruta con el rol:
 

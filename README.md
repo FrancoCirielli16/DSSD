@@ -95,15 +95,16 @@ Después:
 
 ```bash
 alembic upgrade head      # crea las tablas
-python -m app.seed        # datos de demo: 4 usuarios (uno por rol), pass demo1234
+python -m app.seed        # datos de demo: 5 usuarios (2 ONGs), pass demo1234
 uvicorn app.main:app --reload
 ```
 
 - App: http://localhost:8000/
 - Login de prueba: `operador.municipal`, `coordinador.regional`,
-  `ong.cruzroja` o `auditor`, todos con contraseña `demo1234` (son usuarios
-  propios de la app, **distintos** de los usuarios de Bonita de arriba,
-  aunque tengan el mismo nombre).
+  `ong.cruzroja`, `ong.bomberos` o `auditor`, todos con contraseña `demo1234`
+  (son usuarios propios de la app, **distintos** de los usuarios de Bonita de
+  arriba, aunque tengan el mismo nombre). Con `SHOW_DEMO_USERS=true` en
+  `backend/.env` la pantalla de login los lista.
 - Swagger automático: http://localhost:8000/docs
 
 Con ambas partes arriba (Bonita en :8080 y el backend en :8000), entrar como

@@ -50,7 +50,7 @@ def _ventana_provisoria(settings: Settings) -> str:
 
 
 def _completar_registrar_emergencia(settings: Settings, admin: BonitaClient, case_id) -> None:
-    tarea = admin.find_task(case_id, "Registrar Emergencia")
+    tarea = admin.wait_for_task(case_id, "Registrar Emergencia")
     if tarea is None:
         raise BonitaError("El caso se instanció pero no apareció la tarea 'Registrar Emergencia'")
 

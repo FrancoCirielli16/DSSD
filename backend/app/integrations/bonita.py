@@ -72,18 +72,12 @@ class BonitaClient:
         )
         resp.raise_for_status()
 
-    def get_human_tasks(self, case_id, retries: int = 10) -> list:
-        # La primera tarea se crea de forma asincrona: puede tardar un instante.
-        for _ in range(retries):
-            resp = self._request(
-                "GET", "/API/bpm/humanTask", params={"f": f"caseId={case_id}", "p": 0, "c": 100}
-            )
-            resp.raise_for_status()
-            tasks = resp.json()
-            if tasks:
-                return tasks
-            time.sleep(0.5)
-        return []
+    def get_human_tasks(self, case_id) -> list:
+        resp = self._request(
+            "GET", "/API/bpm/humanTask", params={"f": f"caseId={case_id}", "p": 0, "c": 100}
+        )
+        resp.raise_for_status()
+        return resp.json()
 
     def current_user_id(self) -> str:
         resp = self._request("GET", "/API/system/session/unusedid")
@@ -111,7 +105,7 @@ class BonitaClient:
         return None
 
     def wait_for_task(self, case_id, display_name_prefix: str, retries: int = 10) -> dict | None:
-        """find_task reintentando: al completar una tarea, la siguiente tarda un instante en crearse."""
+        """Bonita crea cada tarea de forma asíncrona: puede tardar un instante en aparecer."""
         for intento in range(retries):
             tarea = self.find_task(case_id, display_name_prefix)
             if tarea is not None:

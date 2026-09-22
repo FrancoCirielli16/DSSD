@@ -84,21 +84,27 @@ def test_set_case_variable_envia_valor_y_tipo(client):
 
 
 @responses.activate
-def test_get_human_tasks_reintenta_hasta_que_aparece_la_primera(client):
-    url = f"{BASE}/API/bpm/humanTask"
-    responses.add(responses.GET, url, json=[])
-    responses.add(responses.GET, url, json=[])
-    responses.add(responses.GET, url, json=[{"displayName": "Registrar Emergencia"}])
-    tasks = client.get_human_tasks("1001")
-    assert tasks[0]["displayName"] == "Registrar Emergencia"
-    assert len(responses.calls) == 3
+def test_get_human_tasks_pide_la_pagina_completa(client):
+    responses.add(responses.GET, f"{BASE}/API/bpm/humanTask", json=[{"displayName": "Registrar Emergencia"}])
+    assert client.get_human_tasks("1001")[0]["displayName"] == "Registrar Emergencia"
     assert "p=0" in responses.calls[0].request.url and "c=100" in responses.calls[0].request.url
 
 
 @responses.activate
-def test_get_human_tasks_devuelve_vacio_si_nunca_aparece(client):
+def test_wait_for_task_reintenta_hasta_que_la_tarea_aparece(client):
+    """Bonita crea la tarea siguiente con un instante de retraso."""
+    url = f"{BASE}/API/bpm/humanTask"
+    responses.add(responses.GET, url, json=[])
+    responses.add(responses.GET, url, json=[{"id": "9", "displayName": "Publicar Convocatoria y Notificar"}])
+    assert client.wait_for_task("1001", "Publicar Convocatoria")["id"] == "9"
+    assert len(responses.calls) == 2
+
+
+@responses.activate
+def test_wait_for_task_devuelve_none_si_nunca_aparece(client):
     responses.add(responses.GET, f"{BASE}/API/bpm/humanTask", json=[])
-    assert client.get_human_tasks("1001", retries=3) == []
+    assert client.wait_for_task("1001", "Publicar Convocatoria", retries=3) is None
+    assert len(responses.calls) == 3
 
 
 @responses.activate

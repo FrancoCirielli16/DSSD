@@ -24,8 +24,3 @@ def home(request: Request, user: Usuario = Depends(require_role())):
     return templates.TemplateResponse(
         request, "index.html", {"user": user, "menu": MENU_POR_ROL[user.rol.value]}
     )
-
-
-@router.get("/health")
-def health():
-    return {"status": "ok"}

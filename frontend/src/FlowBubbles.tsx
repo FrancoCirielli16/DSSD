@@ -102,7 +102,6 @@ export function FlowBubbles() {
   const [phase, setPhase] = useState<Phase>("panorama");
   const [pinned, setPinned] = useState(false);
 
-  const current = STEPS.find((s) => s.id === activeStep) ?? STEPS[0];
   const activeZone = focus ? ZONES.find((z) => z.id === focus) ?? null : null;
   const inScene = phase === "scene" && activeZone;
   const traveling = phase === "traveling";
@@ -248,23 +247,6 @@ export function FlowBubbles() {
             </div>
           )}
 
-          <AnimatePresence mode="wait">
-            {inScene && (
-              <motion.div
-                key={`card-${activeZone.id}`}
-                className="flow-focus-card"
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-              >
-                <span className="flow-focus-kicker">Paso {activeZone.step}</span>
-                <strong>{activeZone.label}</strong>
-                <span>{activeZone.hint}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           <AnimatePresence>
             {inScene && (
               <motion.button
@@ -281,9 +263,6 @@ export function FlowBubbles() {
           </AnimatePresence>
         </div>
 
-        {phase === "panorama" && (
-          <p className="flow-hint">Tocá un punto — viajamos hasta ahí</p>
-        )}
       </div>
 
       <ol className="flow-steps">
@@ -317,22 +296,6 @@ export function FlowBubbles() {
           );
         })}
       </ol>
-
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={current.id}
-          className="flow-tooltip"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 6 }}
-          transition={{ duration: 0.22 }}
-        >
-          <strong>
-            {current.id}. {current.label}
-          </strong>
-          <span>{current.detail}</span>
-        </motion.div>
-      </AnimatePresence>
     </div>
   );
 }

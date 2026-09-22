@@ -93,8 +93,6 @@ class Emergencia(Base):
     bonita_case_id: Mapped[int | None] = mapped_column(Integer, unique=True)
     # Ventana real de recepción de ofertas; la fija el Coordinador al publicar.
     ventana_ofertas_fin: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Plazo para que el Municipio adjudique; también lo fija el Coordinador al publicar.
-    plazo_adjudicacion: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     creada_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     municipio: Mapped[Municipio] = relationship()

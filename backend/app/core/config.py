@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     # bonita_username/password de arriba es el usuario técnico (walter.bates), para instanciar
     # y setear variables; estos son para completar tareas humanas (hay que ser miembro del actor).
     bonita_test_password: str = "bpm"
+    # La primera llamada tras un rato sin uso tarda varios segundos (arranque en frío del motor).
+    bonita_timeout_seconds: float = 10.0
     database_url: str = "postgresql+psycopg://rescuesync:rescuesync@localhost:5432/rescuesync"
     session_secret: str = "dev-only-change-me"
     ventana_provisoria_horas: int = 72

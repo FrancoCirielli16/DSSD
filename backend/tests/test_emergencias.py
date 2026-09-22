@@ -76,6 +76,18 @@ def test_si_bonita_rechaza_el_login_no_queda_emergencia_a_medias(login, seeded):
 
 
 @responses.activate
+def test_si_bonita_no_responde_a_tiempo_no_queda_emergencia_a_medias(login, seeded):
+    import requests
+
+    responses.add(responses.POST, f"{BASE}/loginservice", body=requests.ConnectTimeout())
+    r = login("operador.municipal").post("/emergencias/nueva", data=DATOS)
+
+    assert r.status_code == 502
+    with seeded() as s:
+        assert s.query(Emergencia).count() == 0
+
+
+@responses.activate
 def test_si_no_aparece_la_tarea_registrar_no_queda_emergencia_a_medias(login, seeded):
     responses.add(responses.POST, f"{BASE}/loginservice", status=204,
                   headers={"Set-Cookie": "X-Bonita-API-Token=tok; Path=/"})

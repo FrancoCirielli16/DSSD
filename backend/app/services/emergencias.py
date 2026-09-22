@@ -34,7 +34,7 @@ def _completar_registrar_emergencia(settings: Settings, admin: BonitaClient, cas
     if tarea is None:
         raise BonitaError("El caso se instanció pero no apareció la tarea 'Registrar Emergencia'")
 
-    municipio = BonitaClient(settings.bonita_base_url)
+    municipio = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
     municipio.login(BONITA_TEST_USERS["MUNICIPIO"], settings.bonita_test_password)
     municipio.complete_task_as_self(tarea["id"])
 
@@ -63,7 +63,7 @@ def registrar_emergencia(
     db.flush()  # asigna emergencia.id (para el contrato) sin comitear todavía
 
     try:
-        admin = BonitaClient(settings.bonita_base_url)
+        admin = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
         admin.login(settings.bonita_username, settings.bonita_password)
         process_id = admin.resolve_process_id(settings.bonita_process_name, settings.bonita_process_version)
         case_id = admin.start_case(process_id, {

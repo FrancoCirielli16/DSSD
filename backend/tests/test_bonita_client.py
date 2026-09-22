@@ -1,5 +1,6 @@
 """Cliente de Bonita con HTTP simulado: no necesita Studio corriendo."""
 import pytest
+import requests
 import responses
 
 from app.integrations.bonita import BonitaClient, BonitaError, CONTRACT_INPUTS
@@ -128,6 +129,31 @@ def test_complete_task_as_self_asigna_y_ejecuta(client):
     assign_call, exec_call = responses.calls[1], responses.calls[2]
     assert json.loads(assign_call.request.body) == {"assigned_id": "77"}
     assert exec_call.request.url.endswith("/userTask/9001/execution")
+
+
+def test_todas_las_llamadas_llevan_timeout(monkeypatch):
+    c = BonitaClient(BASE, timeout=2.5)
+    timeouts = []
+
+    def fake_request(method, url, **kwargs):
+        timeouts.append(kwargs.get("timeout"))
+        raise requests.ConnectTimeout()
+
+    monkeypatch.setattr(c.session, "request", fake_request)
+    llamadas = [
+        lambda: c.login("u", "p"),
+        lambda: c.resolve_process_id("X", "1.0"),
+        lambda: c.start_case("555", CONTRATO),
+        lambda: c.set_case_variable("1", "v", "x", "java.lang.String"),
+        lambda: c.get_human_tasks("1"),
+        lambda: c.current_user_id(),
+        lambda: c.assign_task("1", "2"),
+        lambda: c.execute_task("1"),
+    ]
+    for llamada in llamadas:
+        with pytest.raises(requests.ConnectTimeout):
+            llamada()
+    assert timeouts == [2.5] * len(llamadas)
 
 
 @responses.activate

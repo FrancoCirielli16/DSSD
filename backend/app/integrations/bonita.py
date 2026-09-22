@@ -25,13 +25,18 @@ class BonitaError(RuntimeError):
 
 
 class BonitaClient:
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, timeout: float = 10.0):
         self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
         self.session = requests.Session()
 
+    def _request(self, method: str, path: str, **kwargs) -> requests.Response:
+        # requests no tiene timeout por defecto: sin esto, un Bonita colgado congela la request.
+        return self.session.request(method, f"{self.base_url}{path}", timeout=self.timeout, **kwargs)
+
     def login(self, username: str, password: str) -> None:
-        resp = self.session.post(
-            f"{self.base_url}/loginservice",
+        resp = self._request(
+            "POST", "/loginservice",
             data={"username": username, "password": password, "redirect": "false"},
         )
         resp.raise_for_status()
@@ -41,8 +46,8 @@ class BonitaClient:
         self.session.headers.update({"X-Bonita-API-Token": token})
 
     def resolve_process_id(self, name: str, version: str) -> str:
-        resp = self.session.get(
-            f"{self.base_url}/API/bpm/process",
+        resp = self._request(
+            "GET", "/API/bpm/process",
             params={"f": [f"name={name}", f"version={version}"]},
         )
         resp.raise_for_status()
@@ -55,26 +60,23 @@ class BonitaClient:
         missing = [k for k in CONTRACT_INPUTS if k not in contract_inputs]
         if missing:
             raise ValueError(f"Faltan inputs del contrato: {missing}")
-        resp = self.session.post(
-            f"{self.base_url}/API/bpm/process/{process_definition_id}/instantiation",
-            json=contract_inputs,
+        resp = self._request(
+            "POST", f"/API/bpm/process/{process_definition_id}/instantiation", json=contract_inputs
         )
         resp.raise_for_status()
         return resp.json()["caseId"]
 
     def set_case_variable(self, case_id, name: str, value, java_type: str) -> None:
-        resp = self.session.put(
-            f"{self.base_url}/API/bpm/caseVariable/{case_id}/{name}",
-            json={"value": value, "type": java_type},
+        resp = self._request(
+            "PUT", f"/API/bpm/caseVariable/{case_id}/{name}", json={"value": value, "type": java_type}
         )
         resp.raise_for_status()
 
     def get_human_tasks(self, case_id, retries: int = 10) -> list:
         # La primera tarea se crea de forma asincrona: puede tardar un instante.
         for _ in range(retries):
-            resp = self.session.get(
-                f"{self.base_url}/API/bpm/humanTask",
-                params={"f": f"caseId={case_id}", "p": 0, "c": 100},
+            resp = self._request(
+                "GET", "/API/bpm/humanTask", params={"f": f"caseId={case_id}", "p": 0, "c": 100}
             )
             resp.raise_for_status()
             tasks = resp.json()
@@ -84,16 +86,16 @@ class BonitaClient:
         return []
 
     def current_user_id(self) -> str:
-        resp = self.session.get(f"{self.base_url}/API/system/session/unusedid")
+        resp = self._request("GET", "/API/system/session/unusedid")
         resp.raise_for_status()
         return resp.json()["user_id"]
 
     def assign_task(self, task_id, user_id) -> None:
-        resp = self.session.put(f"{self.base_url}/API/bpm/userTask/{task_id}", json={"assigned_id": user_id})
+        resp = self._request("PUT", f"/API/bpm/userTask/{task_id}", json={"assigned_id": user_id})
         resp.raise_for_status()
 
     def execute_task(self, task_id) -> None:
-        resp = self.session.post(f"{self.base_url}/API/bpm/userTask/{task_id}/execution", json={})
+        resp = self._request("POST", f"/API/bpm/userTask/{task_id}/execution", json={})
         resp.raise_for_status()
 
     def complete_task_as_self(self, task_id) -> None:

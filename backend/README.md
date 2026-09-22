@@ -20,7 +20,6 @@ Cambios de modelo: editar `app/models/entities.py` y correr
 `alembic revision --autogenerate -m "descripcion"` + `alembic upgrade head`.
 
 - App: http://localhost:8000/
-- Health: http://localhost:8000/health
 - Swagger (automático): http://localhost:8000/docs
 
 ## Estructura

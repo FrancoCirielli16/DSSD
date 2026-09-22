@@ -110,7 +110,3 @@ def test_sesion_de_usuario_borrado_deja_de_valer(login, seeded):
         s.execute(delete(Usuario).where(Usuario.username == "auditor"))
         s.commit()
     assert c.get("/_t/logueado").status_code == 303
-
-
-def test_health_es_publico(client):
-    assert client.get("/health").json() == {"status": "ok"}

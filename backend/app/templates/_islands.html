@@ -1,0 +1,23 @@
+{#- Islas de React dentro de páginas Jinja. Uso en un template:
+      {% from "_islands.html" import island, islands_script %}
+      {{ island("EditorOfertas", {"emergenciaId": e.id}) }}
+      {% block scripts %}{{ islands_script() }}{% endblock %}
+    El componente se registra en frontend/src/islands/index.ts con el mismo nombre. -#}
+
+{% macro island(nombre, props={}) -%}
+<div data-island="{{ nombre }}" data-props="{{ props | tojson | forceescape }}">
+  {%- if islands_version() %}
+  <p class="text-muted small">Cargando…</p>
+  {%- else %}
+  <div class="alert alert-warning small" role="alert">
+    Esta sección usa React y el frontend no está compilado. Correr:
+    <code>cd frontend &amp;&amp; npm install &amp;&amp; npm run build</code>
+  </div>
+  {%- endif %}
+</div>
+{%- endmacro %}
+
+{% macro islands_script() -%}
+{%- set v = islands_version() -%}
+{%- if v %}<script type="module" src="/static/islands/islands.js?v={{ v }}"></script>{% endif -%}
+{%- endmacro %}

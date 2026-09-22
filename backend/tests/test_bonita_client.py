@@ -2,7 +2,6 @@
 import pytest
 import responses
 
-from app.integrations import bonita as bonita_mod
 from app.integrations.bonita import BonitaClient, BonitaError, CONTRACT_INPUTS
 
 BASE = "http://bonita.test/bonita"
@@ -13,11 +12,6 @@ CONTRATO = {"emergenciaId": 1, "municipioId": 2, "nivelGravedad": "ALTO",
 @pytest.fixture
 def client():
     return BonitaClient(BASE + "/")  # con barra final: debe normalizarse
-
-
-@pytest.fixture(autouse=True)
-def sin_espera(monkeypatch):
-    monkeypatch.setattr(bonita_mod.time, "sleep", lambda s: None)
 
 
 def _login_ok(rsps):
@@ -104,3 +98,40 @@ def test_get_human_tasks_reintenta_hasta_que_aparece_la_primera(client):
 def test_get_human_tasks_devuelve_vacio_si_nunca_aparece(client):
     responses.add(responses.GET, f"{BASE}/API/bpm/humanTask", json=[])
     assert client.get_human_tasks("1001", retries=3) == []
+
+
+@responses.activate
+def test_find_task_busca_por_prefijo_del_nombre(client):
+    responses.add(responses.GET, f"{BASE}/API/bpm/humanTask",
+                  json=[{"id": "1", "displayName": "Cargar Ofertas de Ayuda"},
+                        {"id": "2", "displayName": "Registrar Emergencia"}])
+    tarea = client.find_task("1001", "Registrar Emergencia")
+    assert tarea == {"id": "2", "displayName": "Registrar Emergencia"}
+
+
+@responses.activate
+def test_find_task_devuelve_none_si_no_esta(client):
+    responses.add(responses.GET, f"{BASE}/API/bpm/humanTask", json=[])
+    assert client.find_task("1001", "Registrar Emergencia") is None
+
+
+@responses.activate
+def test_complete_task_as_self_asigna_y_ejecuta(client):
+    import json
+
+    responses.add(responses.GET, f"{BASE}/API/system/session/unusedid", json={"user_id": "77"})
+    responses.add(responses.PUT, f"{BASE}/API/bpm/userTask/9001", status=200)
+    responses.add(responses.POST, f"{BASE}/API/bpm/userTask/9001/execution", status=200)
+
+    client.complete_task_as_self("9001")
+
+    assign_call, exec_call = responses.calls[1], responses.calls[2]
+    assert json.loads(assign_call.request.body) == {"assigned_id": "77"}
+    assert exec_call.request.url.endswith("/userTask/9001/execution")
+
+
+@responses.activate
+def test_assign_task_propaga_error_http(client):
+    responses.add(responses.PUT, f"{BASE}/API/bpm/userTask/9001", status=500)
+    with pytest.raises(Exception):
+        client.assign_task("9001", "77")

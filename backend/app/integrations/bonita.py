@@ -11,6 +11,14 @@ import requests
 
 CONTRACT_INPUTS = ("emergenciaId", "municipioId", "nivelGravedad", "ventanaOfertasISO")
 
+# Usuario de prueba de la organización Bonita (entrega-2/ACME.xml) por rol de nuestra
+# app (app.models.Rol): quien nuestra app usa para completar tareas humanas de esa lane.
+BONITA_TEST_USERS = {
+    "MUNICIPIO": "operador.municipal",
+    "COORDINADOR": "coordinador.regional",
+    "ONG": "ong.cruzroja",
+}
+
 
 class BonitaError(RuntimeError):
     pass
@@ -74,3 +82,28 @@ class BonitaClient:
                 return tasks
             time.sleep(0.5)
         return []
+
+    def current_user_id(self) -> str:
+        resp = self.session.get(f"{self.base_url}/API/system/session/unusedid")
+        resp.raise_for_status()
+        return resp.json()["user_id"]
+
+    def assign_task(self, task_id, user_id) -> None:
+        resp = self.session.put(f"{self.base_url}/API/bpm/userTask/{task_id}", json={"assigned_id": user_id})
+        resp.raise_for_status()
+
+    def execute_task(self, task_id) -> None:
+        resp = self.session.post(f"{self.base_url}/API/bpm/userTask/{task_id}/execution", json={})
+        resp.raise_for_status()
+
+    def complete_task_as_self(self, task_id) -> None:
+        """Asigna la tarea al usuario logueado y la ejecuta. Requiere ser miembro
+        del actor de la tarea (loguearse con un usuario de prueba del rol correcto)."""
+        self.assign_task(task_id, self.current_user_id())
+        self.execute_task(task_id)
+
+    def find_task(self, case_id, display_name_prefix: str) -> dict | None:
+        for t in self.get_human_tasks(case_id):
+            if t["displayName"].startswith(display_name_prefix):
+                return t
+        return None

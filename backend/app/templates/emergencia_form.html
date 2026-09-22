@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Registrar emergencia · RescueSync{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Registrar emergencia</h1>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+<form method="post" action="/emergencias/nueva" class="col-md-7"
+      onsubmit="this.querySelector('[type=submit]').disabled = true">
+  <div class="mb-3">
+    <label class="form-label" for="tipo">Tipo</label>
+    <select class="form-select" id="tipo" name="tipo" required>
+      {% for valor, etiqueta in tipo_label.items() %}<option value="{{ valor }}">{{ etiqueta }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="nivel_gravedad">Nivel de gravedad</label>
+    <select class="form-select" id="nivel_gravedad" name="nivel_gravedad" required>
+      {% for g in gravedades %}<option value="{{ g.value }}">{{ g.value }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="zona_afectada">Zona afectada</label>
+    <input class="form-control" id="zona_afectada" name="zona_afectada" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="descripcion">Descripción</label>
+    <textarea class="form-control" id="descripcion" name="descripcion" rows="4" required></textarea>
+  </div>
+  <button class="btn btn-primary" type="submit">Registrar</button>
+</form>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Emergencias · RescueSync{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 m-0">{% if user.rol.value == "ONG" %}Convocatorias abiertas{% else %}Emergencias{% endif %}</h1>
+  {% if user.rol.value == "MUNICIPIO" %}
+  <a class="btn btn-primary btn-sm" href="/emergencias/nueva">Registrar emergencia</a>
+  {% endif %}
+</div>
+{% if emergencias %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead>
+      <tr><th>#</th><th>Tipo</th><th>Gravedad</th><th>Zona</th><th>Estado</th><th class="d-none d-md-table-cell">Registrada</th></tr>
+    </thead>
+    <tbody>
+      {% for e in emergencias %}
+      {% set estado = estado_label[e.estado.value] %}
+      <tr>
+        <td><a href="/emergencias/{{ e.id }}">{{ e.id }}</a></td>
+        <td><a href="/emergencias/{{ e.id }}">{{ tipo_label.get(e.tipo, e.tipo) }}</a></td>
+        <td>{{ e.nivel_gravedad.value }}</td>
+        <td>{{ e.zona_afectada }}</td>
+        <td><span class="badge text-bg-{{ estado[1] }}">{{ estado[0] }}</span></td>
+        <td class="d-none d-md-table-cell">{{ e.creada_en | fecha }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-muted">
+  {% if user.rol.value == "ONG" %}No hay convocatorias abiertas en este momento.{% else %}Todavía no hay emergencias registradas.{% endif %}
+</p>
+{% endif %}
+{% endblock %}

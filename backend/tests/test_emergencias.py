@@ -42,13 +42,17 @@ def test_solo_municipio_ve_y_usa_el_formulario(login):
 @responses.activate
 def test_alta_crea_emergencia_instancia_y_completa_registrar(login, seeded):
     _mock_alta_ok(case_id="4242")
-    r = login("operador.municipal").post("/emergencias/nueva", data=DATOS)
-
-    assert r.status_code == 200
-    assert "registrada" in r.text and "Caso Bonita #4242" in r.text
+    c = login("operador.municipal")
+    r = c.post("/emergencias/nueva", data=DATOS)
 
     with seeded() as s:
         e = s.query(Emergencia).one()
+        # Post/Redirect/Get: recargar la página de destino no reenvía el formulario
+        assert r.status_code == 303
+        assert r.headers["location"] == f"/emergencias/{e.id}?nueva=1"
+        detalle = c.get(r.headers["location"])
+        assert detalle.status_code == 200
+        assert "Emergencia registrada" in detalle.text and "#4242" in detalle.text
         assert e.tipo == "inundacion"
         assert e.nivel_gravedad.value == "ALTO"
         assert e.bonita_case_id == 4242

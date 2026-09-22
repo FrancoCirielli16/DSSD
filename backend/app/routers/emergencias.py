@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
@@ -7,6 +8,8 @@ from app.core.deps import require_role
 from app.core.templating import templates
 from app.db import get_db
 from app.models import Gravedad, Rol, Usuario
+from app.schemas import mensaje_de_error
+from app.schemas.emergencias import ETIQUETAS, EmergenciaIn
 from app.services.emergencias import AltaEmergenciaError, registrar_emergencia
 
 router = APIRouter()
@@ -35,20 +38,17 @@ def crear_emergencia(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
-    tipo, zona_afectada, descripcion = tipo.strip(), zona_afectada.strip(), descripcion.strip()
-    if not (tipo and zona_afectada and descripcion):
-        return _form(request, "Completá todos los campos.", status_code=400)
     try:
-        gravedad = Gravedad(nivel_gravedad)
-    except ValueError:
-        return _form(request, "Nivel de gravedad inválido.", status_code=400)
+        datos = EmergenciaIn(
+            tipo=tipo, nivel_gravedad=nivel_gravedad, zona_afectada=zona_afectada, descripcion=descripcion
+        )
+    except ValidationError as exc:
+        return _form(request, mensaje_de_error(exc, ETIQUETAS), status_code=400)
 
     try:
-        emergencia = registrar_emergencia(
-            db, settings, operador=user, tipo=tipo, nivel_gravedad=gravedad,
-            zona_afectada=zona_afectada, descripcion=descripcion,
-        )
+        emergencia = registrar_emergencia(db, settings, operador=user, **datos.model_dump())
     except AltaEmergenciaError as exc:
         return _form(request, str(exc), status_code=502)
 
     return templates.TemplateResponse(request, "emergencia_creada.html", {"emergencia": emergencia})
+

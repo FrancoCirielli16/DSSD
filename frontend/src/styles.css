@@ -506,9 +506,6 @@ button, input, select, textarea { font: inherit; }
   flex-direction: column;
   gap: 0.55rem;
 }
-.flow-art.is-zoomed .flow-hotspot:not(.is-on) {
-  opacity: 0.25;
-}
 .flow-stage {
   position: relative;
   width: min(100%, calc(min(48vh, 500px) * 1774 / 887));
@@ -517,26 +514,51 @@ button, input, select, textarea { font: inherit; }
   margin-inline: auto;
   border-radius: 18px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.22);
+  background: rgba(0, 0, 0, 0.28);
   isolation: isolate;
 }
-.flow-stage-frame {
+.flow-panorama,
+.flow-destination {
   position: absolute;
   inset: 0;
-  will-change: transform;
+  will-change: transform, filter, opacity;
 }
-.flow-art-img {
+.flow-art-img,
+.flow-destination-img {
   width: 100%;
   height: 100%;
-  object-fit: fill;
+  object-fit: cover;
+  object-position: center;
   user-select: none;
   pointer-events: none;
   display: block;
 }
+.flow-destination {
+  z-index: 2;
+}
+.flow-travel-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(224, 137, 18, 0.18), transparent 55%),
+    linear-gradient(120deg, transparent 30%, rgba(246, 243, 236, 0.08) 50%, transparent 70%);
+  display: grid;
+  place-items: center;
+}
+.flow-travel-line {
+  width: 42%;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #e08912, transparent);
+  box-shadow: 0 0 18px rgba(224, 137, 18, 0.7);
+  animation: travel-streak 0.7s ease-out both;
+}
 .flow-hotspots {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 4;
 }
 .flow-hotspot {
   position: absolute;
@@ -547,7 +569,6 @@ button, input, select, textarea { font: inherit; }
   display: grid;
   place-items: center;
   border-radius: 18px;
-  transition: opacity 220ms var(--ease);
 }
 .flow-hotspot-dot {
   width: 0.72rem;
@@ -568,33 +589,20 @@ button, input, select, textarea { font: inherit; }
   animation: hotspot-pulse 2.4s ease-out infinite;
   pointer-events: none;
 }
-.flow-hotspot:hover .flow-hotspot-dot,
-.flow-hotspot.is-on .flow-hotspot-dot {
+.flow-hotspot:hover .flow-hotspot-dot {
   transform: scale(1.25);
-}
-.flow-hotspot.is-on .flow-hotspot-pulse {
-  animation-duration: 1.4s;
-  border-color: rgba(240, 177, 74, 0.85);
-}
-.flow-vignette {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse at center, transparent 38%, rgba(3, 14, 12, 0.55) 100%);
 }
 .flow-focus-card {
   position: absolute;
   left: 1rem;
   bottom: 1rem;
-  z-index: 4;
+  z-index: 5;
   display: grid;
   gap: 0.15rem;
   max-width: min(16rem, 70%);
   padding: 0.85rem 1rem;
   border-radius: 14px;
-  background: rgba(7, 31, 27, 0.78);
+  background: rgba(7, 31, 27, 0.82);
   border: 1px solid rgba(246, 243, 236, 0.16);
   backdrop-filter: blur(12px);
   color: #f6f3ec;
@@ -620,7 +628,7 @@ button, input, select, textarea { font: inherit; }
   position: absolute;
   top: 0.85rem;
   right: 0.85rem;
-  z-index: 5;
+  z-index: 6;
   border: 1px solid rgba(246, 243, 236, 0.2);
   background: rgba(7, 31, 27, 0.72);
   color: #f6f3ec;
@@ -640,12 +648,18 @@ button, input, select, textarea { font: inherit; }
   font-size: 0.75rem;
   color: rgba(246, 243, 236, 0.5);
   letter-spacing: 0.01em;
+  text-align: center;
 }
 
 @keyframes hotspot-pulse {
   0% { transform: scale(0.7); opacity: 0.7; }
   70% { transform: scale(1.55); opacity: 0; }
   100% { transform: scale(1.55); opacity: 0; }
+}
+@keyframes travel-streak {
+  0% { transform: scaleX(0.2); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: scaleX(1.2); opacity: 0; }
 }
 
 .flow-steps {

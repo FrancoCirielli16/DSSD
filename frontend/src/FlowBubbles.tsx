@@ -1,17 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 type ZoneId = "municipio" | "centro" | "ong" | "rescate" | "ambulancia";
+type Phase = "panorama" | "traveling" | "scene";
 
 type Zone = {
   id: ZoneId;
   step: 1 | 2 | 3 | 4;
   label: string;
   hint: string;
-  x: number;
-  y: number;
+  scene: string;
   hit: { left: number; top: number; width: number; height: number };
-  scale: number;
+  /** Direction the camera "flies" toward during travel. */
+  fly: { x: number; y: number };
 };
 
 const ZONES: Zone[] = [
@@ -20,50 +21,45 @@ const ZONES: Zone[] = [
     step: 1,
     label: "Municipio",
     hint: "Alta de la emergencia",
-    x: 18,
-    y: 28,
+    scene: "/scenes/municipio.jpg",
     hit: { left: 5, top: 10, width: 26, height: 36 },
-    scale: 1.9,
+    fly: { x: -40, y: -20 },
   },
   {
     id: "centro",
     step: 2,
     label: "Centro coordinador",
     hint: "Lotes y convocatoria",
-    x: 48,
-    y: 48,
+    scene: "/scenes/centro.jpg",
     hit: { left: 33, top: 26, width: 28, height: 44 },
-    scale: 1.75,
+    fly: { x: 0, y: 10 },
   },
   {
     id: "ong",
     step: 3,
     label: "Red de ONGs",
     hint: "Ofertas de ayuda",
-    x: 84,
-    y: 28,
+    scene: "/scenes/ong.jpg",
     hit: { left: 68, top: 6, width: 28, height: 42 },
-    scale: 1.95,
+    fly: { x: 45, y: -18 },
   },
   {
     id: "rescate",
     step: 1,
     label: "Equipo en campo",
     hint: "Respuesta operativa",
-    x: 14,
-    y: 78,
+    scene: "/scenes/rescate.jpg",
     hit: { left: 2, top: 56, width: 28, height: 40 },
-    scale: 2.05,
+    fly: { x: -35, y: 35 },
   },
   {
     id: "ambulancia",
     step: 4,
     label: "Recursos y cierre",
     hint: "Adjudicación",
-    x: 86,
-    y: 78,
+    scene: "/scenes/ambulancia.jpg",
     hit: { left: 68, top: 54, width: 30, height: 42 },
-    scale: 2.05,
+    fly: { x: 42, y: 32 },
   },
 ];
 
@@ -98,43 +94,18 @@ const STEPS = [
   },
 ];
 
-const spring = { type: "spring" as const, stiffness: 130, damping: 24, mass: 0.8 };
-
-function zoomTransform(zone: Zone | null, w: number, h: number) {
-  if (!zone || w <= 0 || h <= 0) {
-    return { scale: 1, x: 0, y: 0 };
-  }
-  const s = zone.scale;
-  return {
-    scale: s,
-    x: w / 2 - (zone.x / 100) * w * s,
-    y: h / 2 - (zone.y / 100) * h * s,
-  };
-}
+const TRAVEL_MS = 700;
 
 export function FlowBubbles() {
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ w: 0, h: 0 });
   const [activeStep, setActiveStep] = useState(1);
   const [focus, setFocus] = useState<ZoneId | null>(null);
+  const [phase, setPhase] = useState<Phase>("panorama");
   const [pinned, setPinned] = useState(false);
 
   const current = STEPS.find((s) => s.id === activeStep) ?? STEPS[0];
   const activeZone = focus ? ZONES.find((z) => z.id === focus) ?? null : null;
-  const frame = zoomTransform(activeZone, size.w, size.h);
-
-  useEffect(() => {
-    const el = stageRef.current;
-    if (!el) return;
-    const update = () => {
-      const r = el.getBoundingClientRect();
-      setSize({ w: r.width, h: r.height });
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  const inScene = phase === "scene" && activeZone;
+  const traveling = phase === "traveling";
 
   useEffect(() => {
     if (pinned || focus) return;
@@ -147,41 +118,65 @@ export function FlowBubbles() {
     return () => window.clearInterval(id);
   }, [pinned, focus]);
 
-  function focusZone(zoneId: ZoneId) {
+  function startJourney(zoneId: ZoneId) {
     const zone = ZONES.find((z) => z.id === zoneId);
     if (!zone) return;
+    if (focus === zoneId && phase === "scene") return;
     setPinned(true);
     setFocus(zoneId);
     setActiveStep(zone.step);
+    setPhase("traveling");
+    window.setTimeout(() => setPhase("scene"), TRAVEL_MS);
   }
 
   function focusStep(stepId: number) {
     const step = STEPS.find((s) => s.id === stepId);
     if (!step) return;
-    setPinned(true);
-    setActiveStep(stepId);
-    setFocus(step.zone);
+    if (focus === step.zone && phase === "scene") return;
+    startJourney(step.zone);
   }
 
   function resetView() {
-    setFocus(null);
+    setPhase("traveling");
+    window.setTimeout(() => {
+      setFocus(null);
+      setPhase("panorama");
+    }, 480);
   }
-
-  const zoomed = Boolean(activeZone);
 
   return (
     <div className="flow-scene" aria-label="Flujo RescueSync">
-      <div className={`flow-art ${zoomed ? "is-zoomed" : ""}`}>
-        <div className="flow-stage" ref={stageRef}>
+      <div
+        className={`flow-art ${phase !== "panorama" ? "is-journey" : ""}`}
+      >
+        <div className="flow-stage">
+          {/* Panorama base */}
           <motion.div
-            className="flow-stage-frame"
-            animate={frame}
-            transition={spring}
-            style={{ transformOrigin: "0% 0%" }}
+            className="flow-panorama"
+            animate={
+              traveling && activeZone
+                ? {
+                    scale: 1.22,
+                    x: activeZone.fly.x,
+                    y: activeZone.fly.y,
+                    filter: "blur(7px)",
+                    opacity: 0.45,
+                  }
+                : phase === "scene"
+                  ? {
+                      scale: 1.1,
+                      opacity: 0,
+                      filter: "blur(10px)",
+                      x: activeZone?.fly.x ?? 0,
+                      y: activeZone?.fly.y ?? 0,
+                    }
+                  : { scale: 1, x: 0, y: 0, filter: "blur(0px)", opacity: 1 }
+            }
+            transition={{ duration: TRAVEL_MS / 1000, ease: [0.22, 1, 0.36, 1] }}
           >
             <img
               src="/hero-dssd.png"
-              alt="Red de coordinación: municipio, centro, ONGs y respuesta en campo"
+              alt="Red de coordinación RescueSync"
               className="flow-art-img"
               width={1774}
               height={887}
@@ -190,55 +185,78 @@ export function FlowBubbles() {
             />
           </motion.div>
 
-          <div className="flow-hotspots">
-            {ZONES.map((zone) => {
-              const on = focus === zone.id;
-              return (
+          {/* Destination scene */}
+          <AnimatePresence>
+            {inScene && (
+              <motion.div
+                key={activeZone.id}
+                className="flow-destination"
+                initial={{ opacity: 0, scale: 1.08, filter: "blur(10px)" }}
+                animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                exit={{ opacity: 0, scale: 1.04, filter: "blur(6px)" }}
+                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <img
+                  src={activeZone.scene}
+                  alt={activeZone.label}
+                  className="flow-destination-img"
+                  width={1200}
+                  height={675}
+                  decoding="async"
+                  draggable={false}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Travel streak */}
+          <AnimatePresence>
+            {traveling && (
+              <motion.div
+                className="flow-travel-veil"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                <span className="flow-travel-line" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Hotspots only on panorama */}
+          {phase === "panorama" && (
+            <div className="flow-hotspots">
+              {ZONES.map((zone) => (
                 <button
                   key={zone.id}
                   type="button"
-                  className={`flow-hotspot ${on ? "is-on" : ""}`}
+                  className="flow-hotspot"
                   style={{
                     left: `${zone.hit.left}%`,
                     top: `${zone.hit.top}%`,
                     width: `${zone.hit.width}%`,
                     height: `${zone.hit.height}%`,
                   }}
-                  aria-label={`Enfocar ${zone.label}`}
-                  aria-pressed={on}
-                  onClick={() => {
-                    if (focus === zone.id) resetView();
-                    else focusZone(zone.id);
-                  }}
+                  aria-label={`Viajar a ${zone.label}`}
+                  onClick={() => startJourney(zone.id)}
                 >
                   <span className="flow-hotspot-pulse" />
                   <span className="flow-hotspot-dot" />
                 </button>
-              );
-            })}
-          </div>
-
-          <AnimatePresence>
-            {zoomed && (
-              <motion.div
-                className="flow-vignette"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.35 }}
-              />
-            )}
-          </AnimatePresence>
+              ))}
+            </div>
+          )}
 
           <AnimatePresence mode="wait">
-            {activeZone && (
+            {inScene && (
               <motion.div
-                key={activeZone.id}
+                key={`card-${activeZone.id}`}
                 className="flow-focus-card"
-                initial={{ opacity: 0, y: 16, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                transition={{ duration: 0.28 }}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
               >
                 <span className="flow-focus-kicker">Paso {activeZone.step}</span>
                 <strong>{activeZone.label}</strong>
@@ -248,13 +266,13 @@ export function FlowBubbles() {
           </AnimatePresence>
 
           <AnimatePresence>
-            {zoomed && (
+            {inScene && (
               <motion.button
                 type="button"
                 className="flow-reset"
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
+                exit={{ opacity: 0 }}
                 onClick={resetView}
               >
                 Ver panorama
@@ -263,8 +281,8 @@ export function FlowBubbles() {
           </AnimatePresence>
         </div>
 
-        {!zoomed && (
-          <p className="flow-hint">Tocá un punto de la red para acercarte</p>
+        {phase === "panorama" && (
+          <p className="flow-hint">Tocá un punto — viajamos hasta ahí</p>
         )}
       </div>
 

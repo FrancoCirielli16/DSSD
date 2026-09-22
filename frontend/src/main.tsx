@@ -1,5 +1,13 @@
-import { registry } from "./islands";
-import { mountIslands } from "./mount";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import App from "./App";
+import "./styles.css";
 
-mountIslands(document, registry);
-document.body.addEventListener("htmx:afterSettle", () => mountIslands(document, registry));
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </StrictMode>,
+);

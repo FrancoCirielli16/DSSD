@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Emergencia #{{ e.id }} · RescueSync{% endblock %}
 {% block content %}
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
 {% if nueva %}
 <div class="alert alert-success" role="alert">
   Emergencia registrada. Ya está en manos del Centro Coordinador Regional.

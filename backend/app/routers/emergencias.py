@@ -73,6 +73,7 @@ def ver_emergencia(
     request: Request,
     emergencia_id: int,
     nueva: bool = False,
+    error: str | None = None,
     user: Usuario = Depends(require_role()),
     db: Session = Depends(get_db),
 ):
@@ -80,5 +81,5 @@ def ver_emergencia(
     if emergencia is None:
         raise HTTPException(status_code=404, detail="Emergencia no encontrada")
     return templates.TemplateResponse(
-        request, "emergencia_detalle.html", {"user": user, "e": emergencia, "nueva": nueva}
+        request, "emergencia_detalle.html", {"user": user, "e": emergencia, "nueva": nueva, "error": error}
     )

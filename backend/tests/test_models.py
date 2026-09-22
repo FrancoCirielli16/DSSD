@@ -14,6 +14,7 @@ from app.models import (
     OfertaItem,
     Ong,
     Rol,
+    TipoLote,
     Usuario,
 )
 
@@ -39,6 +40,7 @@ def test_emergencia_nace_registrada_y_sin_caso_bonita(base):
     assert e.estado is EstadoEmergencia.REGISTRADA
     assert e.bonita_case_id is None
     assert e.ventana_ofertas_fin is None
+    assert e.plazo_adjudicacion is None
     assert e.creada_en is not None
 
 
@@ -57,6 +59,18 @@ def test_nivel_gravedad_invalido_se_rechaza(db, base):
     m, _, _ = base
     db.add(Emergencia(municipio_id=m.id, tipo="x", nivel_gravedad="MUY_GRAVE",
                       zona_afectada="z", descripcion="d"))
+    with pytest.raises(IntegrityError):  # CHECK de la columna
+        db.commit()
+
+
+def test_lote_es_principal_por_defecto(base):
+    _, _, e = base
+    assert e.lotes[0].tipo is TipoLote.PRINCIPAL
+
+
+def test_tipo_de_lote_invalido_se_rechaza(db, base):
+    _, _, e = base
+    db.add(Lote(emergencia_id=e.id, recurso="Agua", cantidad=100, unidad="litros", tipo="TERCIARIO"))
     with pytest.raises(IntegrityError):  # CHECK de la columna
         db.commit()
 

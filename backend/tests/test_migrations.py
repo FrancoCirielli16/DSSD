@@ -45,6 +45,25 @@ def test_downgrade_a_base_deja_la_bd_vacia(cfg):
     assert TABLAS.isdisjoint(inspect(engine).get_table_names())
 
 
+def test_0002_marca_como_principal_los_lotes_existentes(cfg):
+    from sqlalchemy import text
+
+    command.upgrade(cfg, "0001")
+    engine = create_engine(cfg.get_main_option("sqlalchemy.url"))
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO municipio (id, nombre, provincia) VALUES (1, 'M', 'P')"))
+        conn.execute(text(
+            "INSERT INTO emergencia (id, municipio_id, tipo, nivel_gravedad, zona_afectada, descripcion,"
+            " estado, creada_en) VALUES (1, 1, 'x', 'ALTO', 'z', 'd', 'REGISTRADA', '2026-09-22')"))
+        conn.execute(text(
+            "INSERT INTO lote (emergencia_id, recurso, cantidad, unidad) VALUES (1, 'Agua', 10, 'litros')"))
+
+    command.upgrade(cfg, "head")
+    with engine.connect() as conn:
+        assert conn.execute(text("SELECT tipo FROM lote")).scalar_one() == "PRINCIPAL"
+        assert conn.execute(text("SELECT plazo_adjudicacion FROM emergencia")).scalar_one() is None
+
+
 def test_hay_una_sola_cabeza_de_migraciones():
     from alembic.script import ScriptDirectory
 

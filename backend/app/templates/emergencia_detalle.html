@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Emergencia #{{ e.id }} · RescueSync{% endblock %}
+{% block content %}
+{% if nueva %}
+<div class="alert alert-success" role="alert">
+  Emergencia registrada. Ya está en manos del Centro Coordinador Regional.
+</div>
+{% endif %}
+{% set estado = estado_label[e.estado.value] %}
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+  <h1 class="h4 m-0">Emergencia #{{ e.id }} · {{ tipo_label.get(e.tipo, e.tipo) }}</h1>
+  <span class="badge text-bg-{{ estado[1] }}">{{ estado[0] }}</span>
+</div>
+
+<dl class="row col-lg-8">
+  <dt class="col-sm-4">Municipio</dt><dd class="col-sm-8">{{ e.municipio.nombre }} ({{ e.municipio.provincia }})</dd>
+  <dt class="col-sm-4">Nivel de gravedad</dt><dd class="col-sm-8">{{ e.nivel_gravedad.value }}</dd>
+  <dt class="col-sm-4">Zona afectada</dt><dd class="col-sm-8">{{ e.zona_afectada }}</dd>
+  <dt class="col-sm-4">Descripción</dt><dd class="col-sm-8" style="white-space: pre-line">{{ e.descripcion }}</dd>
+  <dt class="col-sm-4">Registrada</dt><dd class="col-sm-8">{{ e.creada_en | fecha }}</dd>
+  <dt class="col-sm-4">Cierre de ofertas</dt><dd class="col-sm-8">{{ e.ventana_ofertas_fin | fecha }}</dd>
+  <dt class="col-sm-4">Plazo de adjudicación</dt><dd class="col-sm-8">{{ e.plazo_adjudicacion | fecha }}</dd>
+  <dt class="col-sm-4">Caso Bonita</dt><dd class="col-sm-8">#{{ e.bonita_case_id }}</dd>
+</dl>
+
+<h2 class="h5 mt-4">Lotes de necesidades</h2>
+{% if e.lotes %}
+<ul class="list-group col-lg-8">
+  {% for l in e.lotes %}
+  <li class="list-group-item d-flex justify-content-between">
+    <span>{{ l.recurso }} · {{ l.cantidad }} {{ l.unidad }}</span>
+    <span class="badge text-bg-light">{{ "Principal" if l.tipo.value == "PRINCIPAL" else "Apoyo" }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-muted">El Centro Coordinador todavía no generó lotes.</p>
+{% endif %}
+
+<a class="btn btn-secondary mt-4" href="/emergencias">Volver al listado</a>
+{% endblock %}

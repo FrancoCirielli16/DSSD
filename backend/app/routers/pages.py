@@ -10,10 +10,12 @@ router = APIRouter()
 # Pantallas por perfil. `href=None` = todavía no implementada (se muestra deshabilitada).
 # Al construir una pantalla, poner su ruta acá.
 MENU_POR_ROL = {
-    "MUNICIPIO": [("Registrar emergencia", "/emergencias/nueva"), ("Ofertas validadas", None)],
-    "COORDINADOR": [("Generar y publicar lotes", None), ("Monitoreo", None)],
-    "ONG": [("Cargar / editar ofertas", None), ("Notificaciones de adjudicación", None)],
-    "AUDITOR": [("Consulta de emergencias", None)],
+    "MUNICIPIO": [("Registrar emergencia", "/emergencias/nueva"), ("Mis emergencias", "/emergencias"),
+                  ("Ofertas validadas", None)],
+    "COORDINADOR": [("Emergencias", "/emergencias"), ("Generar y publicar lotes", None), ("Monitoreo", None)],
+    "ONG": [("Convocatorias abiertas", "/emergencias"), ("Cargar / editar ofertas", None),
+            ("Notificaciones de adjudicación", None)],
+    "AUDITOR": [("Consulta de emergencias", "/emergencias")],
 }
 
 

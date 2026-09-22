@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Request
@@ -13,10 +14,34 @@ ROL_LABEL = {
 }
 
 
+TIPO_LABEL = {
+    "inundacion": "Inundación",
+    "incendio": "Incendio",
+    "terremoto": "Terremoto",
+    "otro": "Otro",
+}
+
+ESTADO_LABEL = {
+    "REGISTRADA": ("Registrada", "secondary"),
+    "CONVOCATORIA": ("Convocatoria abierta", "primary"),
+    "CERRADA": ("Cerrada", "dark"),
+}
+
+
+def fecha(dt: datetime | None) -> str:
+    if dt is None:
+        return "—"
+    if dt.tzinfo is None:  # SQLite no guarda la zona; lo que se guarda siempre es UTC
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone().strftime("%d/%m/%Y %H:%M")
+
+
 def _session_context(request: Request) -> dict:
     # Solo para mostrar en la barra; la autorización real la hace core/deps.py contra la BD.
     s = request.session
-    return {"session_user": s if s.get("uid") else None, "rol_label": ROL_LABEL}
+    return {"session_user": s if s.get("uid") else None, "rol_label": ROL_LABEL, "estado_label": ESTADO_LABEL,
+            "tipo_label": TIPO_LABEL}
 
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"), context_processors=[_session_context])
+templates.env.filters["fecha"] = fecha

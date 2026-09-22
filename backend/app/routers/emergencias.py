@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
@@ -10,7 +10,12 @@ from app.db import get_db
 from app.models import Gravedad, Rol, Usuario
 from app.schemas import mensaje_de_error
 from app.schemas.emergencias import ETIQUETAS, EmergenciaIn
-from app.services.emergencias import AltaEmergenciaError, registrar_emergencia
+from app.services.emergencias import (
+    AltaEmergenciaError,
+    emergencia_visible,
+    emergencias_visibles,
+    registrar_emergencia,
+)
 
 router = APIRouter()
 
@@ -52,3 +57,27 @@ def crear_emergencia(
 
     return templates.TemplateResponse(request, "emergencia_creada.html", {"emergencia": emergencia})
 
+
+@router.get("/emergencias", response_class=HTMLResponse)
+def listar_emergencias(
+    request: Request, user: Usuario = Depends(require_role()), db: Session = Depends(get_db)
+):
+    return templates.TemplateResponse(
+        request, "emergencias_lista.html", {"user": user, "emergencias": emergencias_visibles(db, user)}
+    )
+
+
+@router.get("/emergencias/{emergencia_id:int}", response_class=HTMLResponse)
+def ver_emergencia(
+    request: Request,
+    emergencia_id: int,
+    nueva: bool = False,
+    user: Usuario = Depends(require_role()),
+    db: Session = Depends(get_db),
+):
+    emergencia = emergencia_visible(db, user, emergencia_id)
+    if emergencia is None:
+        raise HTTPException(status_code=404, detail="Emergencia no encontrada")
+    return templates.TemplateResponse(
+        request, "emergencia_detalle.html", {"user": user, "e": emergencia, "nueva": nueva}
+    )

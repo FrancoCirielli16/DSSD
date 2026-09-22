@@ -109,3 +109,13 @@ class BonitaClient:
             if t["displayName"].startswith(display_name_prefix):
                 return t
         return None
+
+    def wait_for_task(self, case_id, display_name_prefix: str, retries: int = 10) -> dict | None:
+        """find_task reintentando: al completar una tarea, la siguiente tarda un instante en crearse."""
+        for intento in range(retries):
+            tarea = self.find_task(case_id, display_name_prefix)
+            if tarea is not None:
+                return tarea
+            if intento < retries - 1:
+                time.sleep(0.5)
+        return None

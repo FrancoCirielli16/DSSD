@@ -7,7 +7,7 @@ def mensaje_de_error(exc: ValidationError, etiquetas: dict[str, str]) -> str:
     for err in exc.errors():
         campo = etiquetas.get(str(err["loc"][0]), str(err["loc"][0])) if err["loc"] else "Formulario"
         tipo = err["type"]
-        if tipo in ("missing", "string_too_short"):
+        if err.get("input") in ("", None) or tipo in ("missing", "string_too_short"):
             partes.append(f"{campo}: es obligatorio.")
         elif tipo == "string_too_long":
             partes.append(f"{campo}: máximo {err['ctx']['max_length']} caracteres.")

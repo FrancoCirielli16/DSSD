@@ -24,6 +24,21 @@ if not any(getattr(r, "path", "") == "/_t/coord" for r in app.routes):
         return {"ok": u.username}
 
 
+def test_usuarios_de_demo_ocultos_por_defecto(client):
+    r = client.get("/login")
+    assert "Usuarios de demo" not in r.text and "demo1234" not in r.text
+
+
+def test_usuarios_de_demo_visibles_si_se_activa(client):
+    from app.core.config import Settings, get_settings
+
+    app.dependency_overrides[get_settings] = lambda: Settings(_env_file=None, show_demo_users=True)
+    for r in (client.get("/login"), client.post("/login", data={"username": "x", "password": "y"})):
+        assert "Usuarios de demo" in r.text and "demo1234" in r.text
+        for u in USUARIOS:
+            assert f"<code>{u}</code>" in r.text
+
+
 def test_anonimo_es_redirigido_al_login(client):
     r = client.get("/")
     assert r.status_code == 303 and r.headers["location"] == "/login"

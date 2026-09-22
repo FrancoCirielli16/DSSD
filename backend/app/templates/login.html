@@ -16,6 +16,18 @@
       </div>
       <button class="btn btn-primary w-100" type="submit">Entrar</button>
     </form>
+    {% if demo_users %}
+    <div class="card mt-4">
+      <div class="card-body small">
+        <p class="mb-2 fw-semibold">Usuarios de demo (contraseña <code>{{ demo_password }}</code>)</p>
+        <ul class="list-unstyled mb-0">
+          {% for username, rol in demo_users %}
+          <li><code>{{ username }}</code> <span class="text-muted">· {{ rol_label[rol] }}</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

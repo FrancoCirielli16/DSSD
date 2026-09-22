@@ -11,16 +11,28 @@ from app.models import Municipio, Ong, Rol, Usuario
 
 DEMO_PASSWORD = "demo1234"
 
+MUNICIPIO = ("Bahía Blanca", "Buenos Aires")
+# Dos ONGs: sin la segunda no se pueden probar consorcios, ofertas parciales ni cobertura.
+ONGS = [("Cruz Roja Argentina", "30-54666544-5"), ("Bomberos Voluntarios", "30-68522415-9")]
+
+# (username, nombre, rol, ONG a la que representa). Los MUNICIPIO van al municipio de arriba.
+DEMO_USERS = [
+    ("operador.municipal", "Operador Municipal", Rol.MUNICIPIO, None),
+    ("coordinador.regional", "Centro Coordinador Regional", Rol.COORDINADOR, None),
+    ("ong.cruzroja", "Representante Cruz Roja", Rol.ONG, "Cruz Roja Argentina"),
+    ("ong.bomberos", "Representante Bomberos Voluntarios", Rol.ONG, "Bomberos Voluntarios"),
+    ("auditor", "Auditor / Directivo", Rol.AUDITOR, None),
+]
+
 
 def seed(session_factory=SessionLocal) -> None:
     with session_factory() as db:
-        municipio = db.scalar(select(Municipio).where(Municipio.nombre == "Bahía Blanca"))
+        municipio = db.scalar(select(Municipio).where(Municipio.nombre == MUNICIPIO[0]))
         if municipio is None:
-            municipio = Municipio(nombre="Bahía Blanca", provincia="Buenos Aires")
+            municipio = Municipio(nombre=MUNICIPIO[0], provincia=MUNICIPIO[1])
             db.add(municipio)
-        # Dos ONGs: sin la segunda no se pueden probar consorcios, ofertas parciales ni cobertura.
         ongs = {}
-        for nombre, cuit in [("Cruz Roja Argentina", "30-54666544-5"), ("Bomberos Voluntarios", "30-68522415-9")]:
+        for nombre, cuit in ONGS:
             ong = db.scalar(select(Ong).where(Ong.nombre == nombre))
             if ong is None:
                 ong = Ong(nombre=nombre, cuit=cuit)
@@ -28,14 +40,7 @@ def seed(session_factory=SessionLocal) -> None:
             ongs[nombre] = ong
         db.flush()
 
-        usuarios = [
-            ("operador.municipal", "Operador Municipal", Rol.MUNICIPIO, municipio.id, None),
-            ("coordinador.regional", "Centro Coordinador Regional", Rol.COORDINADOR, None, None),
-            ("ong.cruzroja", "Representante Cruz Roja", Rol.ONG, None, ongs["Cruz Roja Argentina"].id),
-            ("ong.bomberos", "Representante Bomberos Voluntarios", Rol.ONG, None, ongs["Bomberos Voluntarios"].id),
-            ("auditor", "Auditor / Directivo", Rol.AUDITOR, None, None),
-        ]
-        for username, nombre, rol, municipio_id, ong_id in usuarios:
+        for username, nombre, rol, ong_nombre in DEMO_USERS:
             if db.scalar(select(Usuario).where(Usuario.username == username)) is None:
                 db.add(
                     Usuario(
@@ -43,8 +48,8 @@ def seed(session_factory=SessionLocal) -> None:
                         password_hash=hash_password(DEMO_PASSWORD),
                         nombre=nombre,
                         rol=rol,
-                        municipio_id=municipio_id,
-                        ong_id=ong_id,
+                        municipio_id=municipio.id if rol is Rol.MUNICIPIO else None,
+                        ong_id=ongs[ong_nombre].id if ong_nombre else None,
                     )
                 )
         db.commit()

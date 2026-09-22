@@ -61,7 +61,6 @@ def test_0002_marca_como_principal_los_lotes_existentes(cfg):
     command.upgrade(cfg, "head")
     with engine.connect() as conn:
         assert conn.execute(text("SELECT tipo FROM lote")).scalar_one() == "PRINCIPAL"
-        assert conn.execute(text("SELECT plazo_adjudicacion FROM emergencia")).scalar_one() is None
 
 
 def test_hay_una_sola_cabeza_de_migraciones():

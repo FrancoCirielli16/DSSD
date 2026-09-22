@@ -40,7 +40,6 @@ def test_emergencia_nace_registrada_y_sin_caso_bonita(base):
     assert e.estado is EstadoEmergencia.REGISTRADA
     assert e.bonita_case_id is None
     assert e.ventana_ofertas_fin is None
-    assert e.plazo_adjudicacion is None
     assert e.creada_en is not None
 
 

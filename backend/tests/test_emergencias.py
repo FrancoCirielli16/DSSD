@@ -113,6 +113,28 @@ def test_campos_vacios_se_rechazan_sin_llamar_a_bonita(login):
     assert r.status_code == 400
 
 
+def test_zona_demasiado_larga_se_rechaza_sin_llamar_a_bonita(login):
+    r = login("operador.municipal").post("/emergencias/nueva", data={**DATOS, "zona_afectada": "x" * 201})
+    assert r.status_code == 400
+    assert "Zona afectada: máximo 200 caracteres." in r.text
+
+
+def test_varios_errores_se_informan_juntos(login):
+    r = login("operador.municipal").post(
+        "/emergencias/nueva", data={**DATOS, "zona_afectada": "", "nivel_gravedad": "X"})
+    assert r.status_code == 400
+    assert "Nivel de gravedad: valor inválido." in r.text
+    assert "Zona afectada: es obligatorio." in r.text
+
+
+@responses.activate
+def test_los_espacios_de_los_bordes_no_se_guardan(login, seeded):
+    _mock_alta_ok()
+    login("operador.municipal").post("/emergencias/nueva", data={**DATOS, "zona_afectada": "  Centro  "})
+    with seeded() as s:
+        assert s.query(Emergencia).one().zona_afectada == "Centro"
+
+
 def test_usuario_municipio_sin_municipio_asignado_no_rompe(login, seeded):
     from app.core.security import hash_password
     from app.models import Rol, Usuario

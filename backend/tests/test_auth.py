@@ -6,7 +6,7 @@ from app.core.deps import require_role
 from app.main import app
 from app.models import Rol
 
-USUARIOS = ["operador.municipal", "coordinador.regional", "ong.cruzroja", "auditor"]
+USUARIOS = ["operador.municipal", "coordinador.regional", "ong.cruzroja", "ong.bomberos", "auditor"]
 
 
 # Rutas de prueba, una vez por proceso: solo el Coordinador puede entrar.

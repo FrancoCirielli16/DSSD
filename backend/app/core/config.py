@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://rescuesync:rescuesync@localhost:5432/rescuesync"
     session_secret: str = "dev-only-change-me"
     ventana_provisoria_horas: int = 72
+    # Muestra los usuarios de demo y su contraseña en el login. Solo para desarrollo/demo.
+    show_demo_users: bool = False
 
 
 @lru_cache

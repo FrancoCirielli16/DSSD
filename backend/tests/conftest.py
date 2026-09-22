@@ -4,6 +4,7 @@ import os
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["SESSION_SECRET"] = "test-secret"
 os.environ["BONITA_BASE_URL"] = "http://bonita.test/bonita"  # nunca pegarle a un Bonita real en los tests
+os.environ["SHOW_DEMO_USERS"] = "false"  # que el .env local de cada uno no cambie lo que ven los tests
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

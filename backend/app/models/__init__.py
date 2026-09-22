@@ -8,5 +8,6 @@ from app.models.entities import (  # noqa: F401  (importar registra las tablas e
     OfertaItem,
     Ong,
     Rol,
+    TipoLote,
     Usuario,
 )

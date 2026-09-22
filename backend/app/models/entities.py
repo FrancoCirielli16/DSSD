@@ -41,6 +41,11 @@ class EstadoEmergencia(str, enum.Enum):
     CERRADA = "CERRADA"
 
 
+class TipoLote(str, enum.Enum):
+    PRINCIPAL = "PRINCIPAL"
+    APOYO = "APOYO"  # apoyo secundario (consigna, etapa 3 del proceso)
+
+
 class Municipio(Base):
     __tablename__ = "municipio"
 
@@ -88,6 +93,8 @@ class Emergencia(Base):
     bonita_case_id: Mapped[int | None] = mapped_column(Integer, unique=True)
     # Ventana real de recepción de ofertas; la fija el Coordinador al publicar.
     ventana_ofertas_fin: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Plazo para que el Municipio adjudique; también lo fija el Coordinador al publicar.
+    plazo_adjudicacion: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     creada_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     municipio: Mapped[Municipio] = relationship()
@@ -105,6 +112,9 @@ class Lote(Base):
     recurso: Mapped[str] = mapped_column(String(120))
     cantidad: Mapped[int] = mapped_column(Integer)
     unidad: Mapped[str] = mapped_column(String(30))  # personas, raciones, litros…
+    tipo: Mapped[TipoLote] = mapped_column(
+        _enum(TipoLote), default=TipoLote.PRINCIPAL, server_default=TipoLote.PRINCIPAL.value
+    )
 
     emergencia: Mapped[Emergencia] = relationship(back_populates="lotes")
 

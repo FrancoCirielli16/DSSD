@@ -72,6 +72,14 @@ class BonitaClient:
         )
         resp.raise_for_status()
 
+    def get_case_variables(self, case_id) -> dict:
+        """Variables del caso como {nombre: valor} (los valores vienen serializados a texto)."""
+        resp = self._request(
+            "GET", "/API/bpm/caseVariable", params={"f": f"case_id={case_id}", "p": 0, "c": 100}
+        )
+        resp.raise_for_status()
+        return {v["name"]: v["value"] for v in resp.json()}
+
     def get_human_tasks(self, case_id) -> list:
         resp = self._request(
             "GET", "/API/bpm/humanTask", params={"f": f"caseId={case_id}", "p": 0, "c": 100}

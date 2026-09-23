@@ -84,6 +84,16 @@ def test_set_case_variable_envia_valor_y_tipo(client):
 
 
 @responses.activate
+def test_get_case_variables_devuelve_nombre_a_valor(client):
+    responses.add(responses.GET, f"{BASE}/API/bpm/caseVariable",
+                  json=[{"name": "emergenciaId", "value": "7"},
+                        {"name": "ventanaOfertasISO", "value": "2026-10-01T10:00:00-03:00"}])
+    assert client.get_case_variables("1001") == {
+        "emergenciaId": "7", "ventanaOfertasISO": "2026-10-01T10:00:00-03:00"}
+    assert "case_id%3D1001" in responses.calls[0].request.url or "case_id=1001" in responses.calls[0].request.url
+
+
+@responses.activate
 def test_get_human_tasks_pide_la_pagina_completa(client):
     responses.add(responses.GET, f"{BASE}/API/bpm/humanTask", json=[{"displayName": "Registrar Emergencia"}])
     assert client.get_human_tasks("1001")[0]["displayName"] == "Registrar Emergencia"
@@ -152,6 +162,7 @@ def test_todas_las_llamadas_llevan_timeout(monkeypatch):
         lambda: c.start_case("555", CONTRATO),
         lambda: c.set_case_variable("1", "v", "x", "java.lang.String"),
         lambda: c.get_human_tasks("1"),
+        lambda: c.get_case_variables("1"),
         lambda: c.current_user_id(),
         lambda: c.assign_task("1", "2"),
         lambda: c.execute_task("1"),

@@ -55,7 +55,7 @@ function formatFecha(iso: string | null) {
 
 function estadoBadge(estado: Emergencia["estado"]) {
   if (estado === "CONVOCATORIA") return <span className="badge signal">Convocatoria abierta</span>;
-  if (estado === "CERRADA") return <span className="badge muted">Cerrada</span>;
+  if (estado === "CERRADA") return <span className="badge muted">Ventana cerrada</span>;
   return <span className="badge ok">Registrada</span>;
 }
 
@@ -678,7 +678,7 @@ export function DetallePage() {
           </div>
         )}
 
-        {user!.rol === "ONG" && e.estado === "CONVOCATORIA" && !ventanaAbierta && (
+        {user!.rol === "ONG" && (e.estado === "CERRADA" || (e.estado === "CONVOCATORIA" && !ventanaAbierta)) && (
           <div className="alert" style={{ marginBottom: "1.35rem" }}>
             La ventana de ofertas cerró: {formatFecha(e.ventana_ofertas_fin)}
           </div>

@@ -24,7 +24,7 @@ TIPO_LABEL = {
 ESTADO_LABEL = {
     "REGISTRADA": ("Registrada", "secondary"),
     "CONVOCATORIA": ("Convocatoria abierta", "primary"),
-    "CERRADA": ("Cerrada", "dark"),
+    "CERRADA": ("Ventana cerrada", "dark"),
 }
 
 

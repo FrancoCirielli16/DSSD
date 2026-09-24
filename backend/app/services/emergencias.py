@@ -8,7 +8,7 @@ alguien la complete desde la UI nativa de Bonita, que la app no usa.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import requests
 from sqlalchemy import select
@@ -24,17 +24,41 @@ def _filtro_visibilidad(user: Usuario):
     if user.rol is Rol.MUNICIPIO:
         return Emergencia.municipio_id == user.municipio_id
     if user.rol is Rol.ONG:
-        return Emergencia.estado == EstadoEmergencia.CONVOCATORIA
+        # Una vez vencida la ventana la ONG sigue viendo la convocatoria (y su oferta), solo que cerrada.
+        return Emergencia.estado.in_([EstadoEmergencia.CONVOCATORIA, EstadoEmergencia.CERRADA])
     return True
 
 
+def cerrar_ventanas_vencidas(db: Session) -> None:
+    """Pasa a CERRADA las convocatorias cuya ventana de ofertas ya venció.
+
+    Bonita cierra la ventana sola con el boundary timer (el caso avanza a "Evaluar Cobertura");
+    la app no se entera, así que refleja el mismo cierre al consultar, con el mismo instante
+    que se le mandó a Bonita (`ventana_ofertas_fin`).
+    """
+    ahora = datetime.now(timezone.utc)
+    vencidas = [
+        e for e in db.scalars(select(Emergencia).where(
+            Emergencia.estado == EstadoEmergencia.CONVOCATORIA,
+            Emergencia.ventana_ofertas_fin.is_not(None),
+        ))
+        if e.ventana_ofertas_fin.replace(tzinfo=e.ventana_ofertas_fin.tzinfo or timezone.utc) <= ahora
+    ]
+    for e in vencidas:
+        e.estado = EstadoEmergencia.CERRADA
+    if vencidas:
+        db.commit()
+
+
 def emergencias_visibles(db: Session, user: Usuario) -> list[Emergencia]:
+    cerrar_ventanas_vencidas(db)
     return list(db.scalars(
         select(Emergencia).where(_filtro_visibilidad(user)).order_by(Emergencia.id.desc())
     ))
 
 
 def emergencia_visible(db: Session, user: Usuario, emergencia_id: int) -> Emergencia | None:
+    cerrar_ventanas_vencidas(db)
     return db.scalar(select(Emergencia).where(Emergencia.id == emergencia_id, _filtro_visibilidad(user)))
 
 

@@ -680,7 +680,7 @@ export function DetallePage() {
 
         {user!.rol === "ONG" && e.estado === "CONVOCATORIA" && !ventanaAbierta && (
           <div className="alert" style={{ marginBottom: "1.35rem" }}>
-            La ventana de ofertas cerró el {formatFecha(e.ventana_ofertas_fin)}.
+            La ventana de ofertas cerró: {formatFecha(e.ventana_ofertas_fin)}
           </div>
         )}
 

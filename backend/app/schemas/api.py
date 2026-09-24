@@ -1,8 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from app.models import EstadoEmergencia, Gravedad, Rol, TipoLote
+
+
+# SQLite descarta la zona y lo que se guarda siempre es UTC: sin esto el navegador lee la hora
+# como local y la muestra corrida.
+UtcDatetime = Annotated[
+    datetime, AfterValidator(lambda d: d.replace(tzinfo=timezone.utc) if d.tzinfo is None else d)
+]
 
 
 class UsuarioOut(BaseModel):
@@ -37,8 +45,8 @@ class EmergenciaOut(BaseModel):
     descripcion: str
     estado: EstadoEmergencia
     bonita_case_id: int | None
-    ventana_ofertas_fin: datetime | None
-    creada_en: datetime
+    ventana_ofertas_fin: UtcDatetime | None
+    creada_en: UtcDatetime
     municipio_nombre: str | None = None
     municipio_provincia: str | None = None
     lotes: list[LoteOut] = []
@@ -80,6 +88,7 @@ class OfertaOut(BaseModel):
     id: int
     emergencia_id: int
     ong_id: int
+    ong_nombre: str
     version_actual: int
     items: list[OfertaItemOut]
 

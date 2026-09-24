@@ -232,6 +232,8 @@ def api_crear_oferta(
     from app.models import EstadoEmergencia
 
     emergencia = _require_visible(db, user, emergencia_id)
+    if emergencia.estado is EstadoEmergencia.CERRADA:
+        raise HTTPException(status_code=400, detail="La ventana de ofertas ya cerró")
     if emergencia.estado is not EstadoEmergencia.CONVOCATORIA:
         raise HTTPException(status_code=400, detail="La convocatoria no está abierta")
     fin = emergencia.ventana_ofertas_fin

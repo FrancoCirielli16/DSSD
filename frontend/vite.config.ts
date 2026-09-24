@@ -7,7 +7,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:8001",
+        target: "http://127.0.0.1:8001", //aca cambio el puerto a 8000 para que apunte al backend
         changeOrigin: true,
       },
     },

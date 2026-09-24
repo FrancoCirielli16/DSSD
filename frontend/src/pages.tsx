@@ -1,7 +1,7 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { api, type Emergencia, type Meta, type Rol } from "./api";
+import { api, type Emergencia, type Meta, type Oferta, type Rol } from "./api";
 import { useAuth } from "./auth";
 import { FlowBubbles } from "./FlowBubbles";
 import { PageHeader } from "./PageHeader";
@@ -468,15 +468,17 @@ export function DetallePage() {
   const { id: idParam } = useParams();
   const id = Number(idParam);
   const [e, setE] = useState<Emergencia | null>(null);
+  const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const reload = useCallback(async () => {
-    const [em, m] = await Promise.all([api.getEmergencia(id), api.meta()]);
+    const [em, m, of] = await Promise.all([api.getEmergencia(id), api.meta(), api.listOfertas(id)]);
     setE(em);
     setMeta(m);
+    setOfertas(of);
   }, [id]);
 
   useEffect(() => {
@@ -538,23 +540,21 @@ export function DetallePage() {
 
   async function oferta(ev: FormEvent<HTMLFormElement>) {
     ev.preventDefault();
-    const current = e;
-    if (!current || !current.lotes.length) return;
+    if (!e) return;
     const fd = new FormData(ev.currentTarget);
-    const loteId = Number(fd.get("lote_id"));
-    const lote = current.lotes.find((l) => l.id === loteId);
+    const items = e.lotes
+      .map((l) => ({ lote_id: l.id, recurso: l.recurso, cantidad: Number(fd.get(`lote_${l.id}`) || 0) }))
+      .filter((i) => i.cantidad > 0);
+    if (!items.length) {
+      setError("Indicá cuánto ofrecés para al menos un lote.");
+      return;
+    }
     setBusy(true);
     setError(null);
     setOk(null);
     try {
-      await api.createOferta(id, [
-        {
-          lote_id: loteId,
-          recurso: lote?.recurso ?? "recurso",
-          cantidad: Number(fd.get("cantidad")),
-        },
-      ]);
-      setOk("Oferta cargada (versionada)");
+      const o = await api.createOferta(id, items);
+      setOk(`Oferta enviada (versión ${o.version_actual})`);
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
@@ -562,6 +562,11 @@ export function DetallePage() {
       setBusy(false);
     }
   }
+
+  const ventanaAbierta = !!e.ventana_ofertas_fin && new Date(e.ventana_ofertas_fin) > new Date();
+  const miOferta = user!.rol === "ONG" ? ofertas[0] : undefined;
+  const cantidadOfrecida = (o: Oferta | undefined, loteId: number) =>
+    o?.items.find((i) => i.lote_id === loteId)?.cantidad;
 
   return (
     <Shell>
@@ -673,27 +678,59 @@ export function DetallePage() {
           </div>
         )}
 
-        {user!.rol === "ONG" && e.estado === "CONVOCATORIA" && (
-          <form className="panel" style={{ maxWidth: 520, marginBottom: "1.35rem" }} onSubmit={oferta}>
-            <h3>Cargar oferta</h3>
-            <div className="field">
-              <label>Lote</label>
-              <select name="lote_id" required>
-                {e.lotes.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    #{l.id} {l.recurso} (pedido {l.cantidad})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Cantidad ofrecida</label>
-              <input name="cantidad" type="number" min={1} defaultValue={1} required />
-            </div>
-            <button className="btn btn-primary" disabled={busy || e.lotes.length === 0}>
+        {user!.rol === "ONG" && e.estado === "CONVOCATORIA" && !ventanaAbierta && (
+          <div className="alert" style={{ marginBottom: "1.35rem" }}>
+            La ventana de ofertas cerró el {formatFecha(e.ventana_ofertas_fin)}.
+          </div>
+        )}
+
+        {user!.rol === "ONG" && e.estado === "CONVOCATORIA" && ventanaAbierta && (
+          <form className="panel" style={{ maxWidth: 620, marginBottom: "1.35rem" }} onSubmit={oferta}>
+            <h3>{miOferta ? `Modificar oferta (vas por la versión ${miOferta.version_actual})` : "Cargar oferta"}</h3>
+            <p className="hint">Cada envío reemplaza la oferta completa y queda como una versión nueva. Dejá en 0 lo que no ofrecés.</p>
+            {e.lotes.map((l) => (
+              <div className="field" key={`${l.id}-${miOferta?.version_actual ?? 0}`}>
+                <label>
+                  #{l.id} {l.recurso} (pedido {l.cantidad} {l.unidad})
+                </label>
+                <input
+                  name={`lote_${l.id}`}
+                  type="number"
+                  min={0}
+                  defaultValue={cantidadOfrecida(miOferta, l.id) ?? 0}
+                />
+              </div>
+            ))}
+            <button className="btn btn-primary" disabled={busy}>
               Enviar oferta
             </button>
           </form>
+        )}
+
+        {ofertas.length > 0 && (
+          <>
+            <h2 className="section-title">{user!.rol === "ONG" ? "Mi oferta vigente" : "Ofertas recibidas"}</h2>
+            <div className="panel" style={{ marginBottom: "1.35rem" }}>
+              {ofertas.map((o) => (
+                <div key={o.id} style={{ marginBottom: "0.75rem" }}>
+                  <strong>{o.ong_nombre}</strong> <span className="badge muted">v{o.version_actual}</span>
+                  {e.lotes.map((l) => {
+                    const c = cantidadOfrecida(o, l.id);
+                    return c ? (
+                      <div className="lote-row" key={l.id}>
+                        <span>
+                          #{l.id} {l.recurso}
+                        </span>
+                        <span>
+                          {c} / {l.cantidad} {l.unidad}
+                        </span>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         <Link className="btn btn-ghost" to="/emergencias" style={{ display: "inline-flex" }}>

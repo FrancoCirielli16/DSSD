@@ -496,7 +496,8 @@ export function DetallePage() {
 
   async function addLote(ev: FormEvent<HTMLFormElement>) {
     ev.preventDefault();
-    const fd = new FormData(ev.currentTarget);
+    const form = ev.currentTarget;
+    const fd = new FormData(form);
     setBusy(true);
     setError(null);
     setOk(null);
@@ -507,7 +508,7 @@ export function DetallePage() {
         unidad: String(fd.get("unidad")),
         tipo: String(fd.get("tipo")),
       });
-      ev.currentTarget.reset();
+      form.reset();
       setOk("Lote agregado");
       await reload();
     } catch (err) {

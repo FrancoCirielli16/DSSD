@@ -27,6 +27,13 @@ class LoginIn(BaseModel):
     password: str = Field(min_length=1)
 
 
+class BonitaIdentityOut(BaseModel):
+    user_id: str
+    username: str
+    nombre: str
+    grupos: list[str]
+
+
 class LoteOut(BaseModel):
     id: int
     recurso: str

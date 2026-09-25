@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+import requests
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -12,6 +13,7 @@ from app.db import get_db
 from app.models import Emergencia, Oferta, OfertaItem, Rol, Usuario
 from app.schemas.api import (
     EmergenciaOut,
+    BonitaIdentityOut,
     LoginIn,
     LoteCreateIn,
     LoteOut,
@@ -37,6 +39,8 @@ from app.services.lotes import (
     borrar_lote,
     publicar_convocatoria,
 )
+from app.integrations.bonita import BonitaError
+from app.integrations.bonita_identity import authenticate
 
 router = APIRouter(prefix="/api")
 
@@ -95,6 +99,43 @@ def api_login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     request.session.clear()
     request.session.update({"uid": user.id, "nombre": user.nombre, "rol": user.rol.value})
     return user
+
+
+@router.post("/auth/bonita/login", response_model=BonitaIdentityOut)
+def api_bonita_login(
+    body: LoginIn,
+    request: Request,
+    settings: Settings = Depends(get_settings),
+):
+    try:
+        identity = authenticate(
+            settings.bonita_base_url,
+            body.username.strip(),
+            body.password,
+            settings.bonita_timeout_seconds,
+        )
+    except requests.HTTPError as exc:
+        if exc.response is not None and exc.response.status_code in (401, 403):
+            raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos") from exc
+        raise HTTPException(status_code=502, detail="Bonita no pudo autenticar el usuario") from exc
+    except (BonitaError, requests.RequestException) as exc:
+        raise HTTPException(status_code=502, detail="No se pudo conectar con Bonita") from exc
+
+    request.session.clear()
+    request.session.update(
+        {
+            "bonita_user_id": identity.user_id,
+            "bonita_username": identity.username,
+            "bonita_nombre": identity.display_name,
+            "bonita_grupos": sorted(identity.group_paths),
+        }
+    )
+    return BonitaIdentityOut(
+        user_id=identity.user_id,
+        username=identity.username,
+        nombre=identity.display_name,
+        grupos=sorted(identity.group_paths),
+    )
 
 
 @router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)

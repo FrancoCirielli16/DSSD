@@ -92,6 +92,30 @@ class BonitaClient:
         resp.raise_for_status()
         return resp.json()["user_id"]
 
+    def get_user(self, user_id: str) -> dict:
+        resp = self._request("GET", f"/API/identity/user/{user_id}")
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_user_memberships(self, user_id: str) -> list[dict]:
+        resp = self._request(
+            "GET",
+            "/API/identity/membership",
+            params={"f": f"user_id={user_id}", "p": 0, "c": 100},
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_group(self, group_id: str) -> dict:
+        resp = self._request("GET", f"/API/identity/group/{group_id}")
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_role(self, role_id: str) -> dict:
+        resp = self._request("GET", f"/API/identity/role/{role_id}")
+        resp.raise_for_status()
+        return resp.json()
+
     def assign_task(self, task_id, user_id) -> None:
         resp = self._request("PUT", f"/API/bpm/userTask/{task_id}", json={"assigned_id": user_id})
         resp.raise_for_status()

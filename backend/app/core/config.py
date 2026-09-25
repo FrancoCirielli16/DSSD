@@ -11,14 +11,10 @@ class Settings(BaseSettings):
 
     app_name: str = "RescueSync"
     bonita_base_url: str = "http://localhost:8080/bonita"
-    bonita_username: str = "walter.bates"
+    bonita_username: str = "admin.rescuesync"
     bonita_password: str = "bpm"
     bonita_process_name: str = "Gestion Integral de la Emergencia"
     bonita_process_version: str = "1.0"
-    # Password compartida de los usuarios de prueba de la organización (ver entrega-2/ACME.xml).
-    # bonita_username/password de arriba es el usuario técnico (walter.bates), para instanciar
-    # y setear variables; estos son para completar tareas humanas (hay que ser miembro del actor).
-    bonita_test_password: str = "bpm"
     # La primera llamada tras un rato sin uso tarda varios segundos (arranque en frío del motor).
     bonita_timeout_seconds: float = 10.0
     database_url: str = "postgresql+psycopg://rescuesync:rescuesync@localhost:5432/rescuesync"

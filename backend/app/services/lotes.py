@@ -13,7 +13,7 @@ import requests
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.integrations.bonita import BONITA_TEST_USERS, BonitaClient, BonitaError
+from app.integrations.bonita import BonitaClient, BonitaError
 from app.models import Emergencia, EstadoEmergencia, Lote
 from app.schemas.lotes import LoteIn
 
@@ -86,14 +86,12 @@ def publicar_en_bonita(settings: Settings, case_id: int, ventana_fin: datetime) 
     """Completa "Revisar…" (si sigue pendiente), setea la ventana y completa "Publicar…"."""
     admin = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
     admin.login(settings.bonita_username, settings.bonita_password)
-    coordinador = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
-    coordinador.login(BONITA_TEST_USERS["COORDINADOR"], settings.bonita_test_password)
 
     # Si un intento anterior se cortó después de completar "Revisar…", el caso ya está en
     # "Publicar…": se sigue desde ahí en vez de fallar.
     revisar = admin.find_task(case_id, TAREA_REVISAR)
     if revisar is not None:
-        coordinador.complete_task_as_self(revisar["id"])
+        admin.complete_task_as_self(revisar["id"])
 
     publicar = admin.wait_for_task(case_id, TAREA_PUBLICAR)
     if publicar is None:
@@ -103,4 +101,4 @@ def publicar_en_bonita(settings: Settings, case_id: int, ventana_fin: datetime) 
     admin.set_case_variable(
         case_id, "ventanaOfertasISO", ventana_fin.isoformat(timespec="seconds"), "java.lang.String"
     )
-    coordinador.complete_task_as_self(publicar["id"])
+    admin.complete_task_as_self(publicar["id"])

@@ -143,7 +143,7 @@ def test_publicar_completa_las_dos_tareas_y_setea_la_ventana(login, emergencia, 
 
     # la ventana se setea ANTES de completar "Publicar…": el timer la lee al activarse la tarea siguiente
     assert _paths() == [
-        "/loginservice", "/loginservice", "/API/bpm/humanTask",
+        "/loginservice", "/API/bpm/humanTask",
         "/API/system/session/unusedid", "/API/bpm/userTask/1", "/API/bpm/userTask/1/execution",
         "/API/bpm/humanTask", f"/API/bpm/caseVariable/{CASE}/ventanaOfertasISO",
         "/API/system/session/unusedid", "/API/bpm/userTask/2", "/API/bpm/userTask/2/execution",

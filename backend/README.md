@@ -111,10 +111,12 @@ Para sumar una pantalla al menú de un perfil, poner su ruta en `MENU_POR_ROL`
 
 ## Bonita
 
-`app/integrations/bonita.py` es el cliente REST (login con CSRF, instanciar,
-listar tareas, setear variables). Está probado contra Studio 10.4.0.
+`app/integrations/bonita.py` es el cliente REST (login con CSRF, identidad,
+instanciar, listar tareas, setear variables). Está probado contra Studio 10.4.0.
 Configuración en `.env` (`BONITA_*`).
 
-Reglas: la app nunca completa la tarea `Cargar Ofertas de Ayuda`; guarda el
-`caseId` de cada emergencia; avanza tareas logueándose como un usuario del
-rol correspondiente.
+Durante la migración, el backend usa `BONITA_USERNAME` como identidad
+operativa. En desarrollo debe ser `admin.rescuesync`, que pertenece a los
+grupos de Municipio, Coordinador, ONG y Auditor. La app nunca completa la
+tarea `Cargar Ofertas de Ayuda`; guarda el `caseId` de cada emergencia y
+avanza las tareas con esa identidad configurada.

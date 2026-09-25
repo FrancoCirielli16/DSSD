@@ -59,11 +59,11 @@ def test_alta_crea_emergencia_instancia_y_completa_registrar(login, seeded):
         assert e.municipio_id is not None
         assert e.estado.value == "REGISTRADA"
 
-    # las 8 llamadas HTTP se hicieron en el orden esperado (dos logins intercalados)
+    # La instancia y la tarea se completan con la misma sesión administrativa.
     paths = [urlparse(c.request.url).path[len(BASE_PATH):] for c in responses.calls]
     assert paths == [
         "/loginservice", "/API/bpm/process", "/API/bpm/process/555/instantiation",
-        "/API/bpm/humanTask", "/loginservice", "/API/system/session/unusedid",
+        "/API/bpm/humanTask", "/API/system/session/unusedid",
         "/API/bpm/userTask/9001", "/API/bpm/userTask/9001/execution",
     ]
 

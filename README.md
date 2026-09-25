@@ -66,7 +66,10 @@ se lo necesite.
 
 Usuarios de prueba de la organización (todos con password `bpm`):
 `operador.municipal` (Municipio), `coordinador.regional` (Centro
-Coordinador), `ong.cruzroja` (ONG). `walter.bates` es el usuario técnico/admin.
+Coordinador), `ong.cruzroja` (ONG) y `admin.rescuesync` (administrador de
+desarrollo, miembro temporal de todos los grupos). `walter.bates` es el
+usuario técnico por defecto de Bonita, pero el backend usa `admin.rescuesync`
+para completar las tareas durante esta etapa.
 
 Si algo falla al desplegar, el diálogo de Studio no da el motivo real; hay
 que mirar los logs: `<instalación de Studio>\workspace\tomcat\server\logs\bonita.log`

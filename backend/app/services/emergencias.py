@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.integrations.bonita import BONITA_TEST_USERS, BonitaClient, BonitaError
+from app.integrations.bonita import BonitaClient, BonitaError
 from app.models import Emergencia, EstadoEmergencia, Gravedad, Rol, Usuario
 
 
@@ -73,14 +73,12 @@ def _ventana_provisoria(settings: Settings) -> str:
     return vencimiento.isoformat(timespec="seconds")
 
 
-def _completar_registrar_emergencia(settings: Settings, admin: BonitaClient, case_id) -> None:
+def _completar_registrar_emergencia(admin: BonitaClient, case_id) -> None:
     tarea = admin.wait_for_task(case_id, "Registrar Emergencia")
     if tarea is None:
         raise BonitaError("El caso se instanció pero no apareció la tarea 'Registrar Emergencia'")
 
-    municipio = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
-    municipio.login(BONITA_TEST_USERS["MUNICIPIO"], settings.bonita_test_password)
-    municipio.complete_task_as_self(tarea["id"])
+    admin.complete_task_as_self(tarea["id"])
 
 
 def registrar_emergencia(
@@ -116,7 +114,7 @@ def registrar_emergencia(
             "nivelGravedad": nivel_gravedad.value,
             "ventanaOfertasISO": _ventana_provisoria(settings),
         })
-        _completar_registrar_emergencia(settings, admin, case_id)
+        _completar_registrar_emergencia(admin, case_id)
     except (BonitaError, requests.RequestException) as exc:
         db.rollback()
         raise AltaEmergenciaError(

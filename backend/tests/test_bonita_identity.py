@@ -54,3 +54,6 @@ def test_authenticate_devuelve_usuario_y_grupos():
     assert identity.username == "admin.rescuesync"
     assert identity.display_name == "Administrador RescueSync"
     assert identity.group_paths == {"/rescuesync/municipio", "/rescuesync/auditor"}
+    assert identity.roles == {"MUNICIPIO", "AUDITOR"}
+    assert identity.has_role("MUNICIPIO")
+    assert not identity.has_role("ONG")

@@ -77,6 +77,21 @@ class Usuario(Base):
     ong: Mapped[Ong | None] = relationship()
 
 
+class PerfilOperativo(Base):
+    """Asociaciones de negocio de una identidad administrada por Bonita."""
+
+    __tablename__ = "perfil_operativo"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    bonita_username: Mapped[str] = mapped_column(String(60), unique=True)
+    nombre: Mapped[str] = mapped_column(String(120))
+    municipio_id: Mapped[int | None] = mapped_column(ForeignKey("municipio.id"))
+    ong_id: Mapped[int | None] = mapped_column(ForeignKey("ong.id"))
+
+    municipio: Mapped[Municipio | None] = relationship()
+    ong: Mapped[Ong | None] = relationship()
+
+
 class Emergencia(Base):
     __tablename__ = "emergencia"
 

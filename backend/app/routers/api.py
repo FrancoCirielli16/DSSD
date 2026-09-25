@@ -128,6 +128,7 @@ def api_bonita_login(
             "bonita_username": identity.username,
             "bonita_nombre": identity.display_name,
             "bonita_grupos": sorted(identity.group_paths),
+            "bonita_roles": sorted(identity.roles),
         }
     )
     return BonitaIdentityOut(
@@ -135,6 +136,7 @@ def api_bonita_login(
         username=identity.username,
         nombre=identity.display_name,
         grupos=sorted(identity.group_paths),
+        roles=sorted(identity.roles),
     )
 
 

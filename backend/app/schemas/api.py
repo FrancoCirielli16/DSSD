@@ -32,6 +32,7 @@ class BonitaIdentityOut(BaseModel):
     username: str
     nombre: str
     grupos: list[str]
+    roles: list[str]
 
 
 class LoteOut(BaseModel):

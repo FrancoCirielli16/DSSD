@@ -2,6 +2,13 @@ from dataclasses import dataclass
 
 from app.integrations.bonita import BonitaClient
 
+ROLE_GROUPS = {
+    "MUNICIPIO": "/rescuesync/municipio",
+    "COORDINADOR": "/rescuesync/coordinador",
+    "ONG": "/rescuesync/ong",
+    "AUDITOR": "/rescuesync/auditor",
+}
+
 
 @dataclass(frozen=True)
 class BonitaMembership:
@@ -25,6 +32,13 @@ class BonitaIdentity:
     @property
     def group_paths(self) -> frozenset[str]:
         return frozenset(membership.group_path for membership in self.memberships)
+
+    @property
+    def roles(self) -> frozenset[str]:
+        return frozenset(role for role, group in ROLE_GROUPS.items() if group in self.group_paths)
+
+    def has_role(self, role: str) -> bool:
+        return role in self.roles
 
 
 def authenticate(base_url: str, username: str, password: str, timeout: float = 10.0) -> BonitaIdentity:

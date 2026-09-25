@@ -7,9 +7,10 @@ from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db import SessionLocal
-from app.models import Municipio, Ong, Rol, Usuario
+from app.models import Municipio, Ong, PerfilOperativo, Rol, Usuario
 
 DEMO_PASSWORD = "demo1234"
+BONITA_ADMIN_USERNAME = "admin.rescuesync"
 
 MUNICIPIO = ("Bahía Blanca", "Buenos Aires")
 # Dos ONGs: sin la segunda no se pueden probar consorcios, ofertas parciales ni cobertura.
@@ -52,6 +53,28 @@ def seed(session_factory=SessionLocal) -> None:
                         ong_id=ongs[ong_nombre].id if ong_nombre else None,
                     )
                 )
+            if db.scalar(
+                select(PerfilOperativo).where(PerfilOperativo.bonita_username == username)
+            ) is None:
+                db.add(
+                    PerfilOperativo(
+                        bonita_username=username,
+                        nombre=nombre,
+                        municipio_id=municipio.id if rol is Rol.MUNICIPIO else None,
+                        ong_id=ongs[ong_nombre].id if ong_nombre else None,
+                    )
+                )
+        if db.scalar(
+            select(PerfilOperativo).where(PerfilOperativo.bonita_username == BONITA_ADMIN_USERNAME)
+        ) is None:
+            db.add(
+                PerfilOperativo(
+                    bonita_username=BONITA_ADMIN_USERNAME,
+                    nombre="Administrador RescueSync",
+                    municipio_id=municipio.id,
+                    ong_id=ongs["Cruz Roja Argentina"].id,
+                )
+            )
         db.commit()
 
 

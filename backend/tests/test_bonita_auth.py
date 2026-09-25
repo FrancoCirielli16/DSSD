@@ -61,6 +61,7 @@ def test_login_bonita_guarda_la_identidad_en_la_sesion(client):
         "username": "admin.rescuesync",
         "nombre": "Administrador RescueSync",
         "grupos": ["/rescuesync/coordinador", "/rescuesync/municipio"],
+        "roles": ["COORDINADOR", "MUNICIPIO"],
     }
 
 

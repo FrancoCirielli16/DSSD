@@ -48,7 +48,9 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> Authent
         request.session.clear()
         return None
     roles = request.session.get("bonita_roles", [])
-    default_role = Rol.AUDITOR.value if Rol.AUDITOR.value in roles else (roles[0] if roles else Rol.AUDITOR.value)
+    default_role = request.session.get("bonita_active_role")
+    if default_role not in roles:
+        default_role = Rol.MUNICIPIO.value if Rol.MUNICIPIO.value in roles else (roles[0] if roles else Rol.AUDITOR.value)
     return AuthenticatedUser(
         id=profile.id,
         username=bonita_username,

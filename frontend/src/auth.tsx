@@ -7,13 +7,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, type Usuario } from "./api";
+import { api, type Rol, type Usuario } from "./api";
 
 type AuthState = {
   user: Usuario | null;
   loading: boolean;
   refresh: () => Promise<void>;
   login: (username: string, password: string) => Promise<void>;
+  setRole: (role: Rol) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -47,9 +48,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const setRole = useCallback(async (role: Rol) => {
+    setUser(await api.selectRole(role));
+  }, []);
+
   const value = useMemo(
-    () => ({ user, loading, refresh, login, logout }),
-    [user, loading, refresh, login, logout],
+    () => ({ user, loading, refresh, login, logout, setRole }),
+    [user, loading, refresh, login, logout, setRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

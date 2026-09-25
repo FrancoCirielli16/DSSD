@@ -60,7 +60,7 @@ function estadoBadge(estado: Emergencia["estado"]) {
 }
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, setRole } = useAuth();
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -69,7 +69,22 @@ export function Shell({ children }: { children: ReactNode }) {
         </Link>
         {user && (
           <div className="topbar-meta">
-            <span className="role-chip">{ROL_LABEL[user.rol]}</span>
+            {user.roles.length > 1 ? (
+              <select
+                className="role-chip"
+                aria-label="Rol activo"
+                value={user.rol}
+                onChange={(event) => void setRole(event.target.value as Rol)}
+              >
+                {user.roles.map((role) => (
+                  <option key={role} value={role}>
+                    {ROL_LABEL[role]}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="role-chip">{ROL_LABEL[user.rol]}</span>
+            )}
             <span>{user.nombre}</span>
             <button className="btn btn-ghost light" type="button" onClick={() => void logout()}>
               Salir

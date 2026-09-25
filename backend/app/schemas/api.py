@@ -27,6 +27,10 @@ class LoginIn(BaseModel):
     password: str = Field(min_length=1)
 
 
+class BonitaRoleIn(BaseModel):
+    role: Rol
+
+
 class BonitaIdentityOut(BaseModel):
     user_id: str
     username: str

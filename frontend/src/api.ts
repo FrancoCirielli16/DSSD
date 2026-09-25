@@ -5,6 +5,15 @@ export type Usuario = {
   username: string;
   nombre: string;
   rol: Rol;
+  roles: Rol[];
+};
+
+export type BonitaIdentity = {
+  user_id: string;
+  username: string;
+  nombre: string;
+  grupos: string[];
+  roles: Rol[];
 };
 
 export type Lote = {
@@ -81,14 +90,35 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
+function asUsuario(identity: BonitaIdentity, activeRole?: Rol): Usuario {
+  const role = activeRole && identity.roles.includes(activeRole)
+    ? activeRole
+    : (["MUNICIPIO", "COORDINADOR", "ONG", "AUDITOR"] as Rol[]).find((candidate) =>
+        identity.roles.includes(candidate),
+      );
+  if (!role) throw new Error("El usuario Bonita no tiene un rol operativo");
+  return {
+    id: Number(identity.user_id),
+    username: identity.username,
+    nombre: identity.nombre,
+    rol: role,
+    roles: identity.roles,
+  };
+}
+
 export const api = {
   meta: () => request<Meta>("/api/meta"),
-  me: () => request<Usuario>("/api/auth/me"),
+  me: () => request<BonitaIdentity>("/api/auth/bonita/me").then(asUsuario),
   login: (username: string, password: string) =>
-    request<Usuario>("/api/auth/login", {
+    request<BonitaIdentity>("/api/auth/bonita/login", {
       method: "POST",
       body: JSON.stringify({ username, password }),
-    }),
+    }).then(asUsuario),
+  selectRole: (role: Rol) =>
+    request<BonitaIdentity>("/api/auth/bonita/role", {
+      method: "POST",
+      body: JSON.stringify({ role }),
+    }).then((identity) => asUsuario(identity, role)),
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
   listEmergencias: () => request<Emergencia[]>("/api/emergencias"),
   getEmergencia: (id: number) => request<Emergencia>(`/api/emergencias/${id}`),

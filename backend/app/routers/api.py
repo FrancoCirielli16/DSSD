@@ -14,6 +14,7 @@ from app.models import Emergencia, Oferta, OfertaItem, Rol, Usuario
 from app.schemas.api import (
     EmergenciaOut,
     BonitaIdentityOut,
+    BonitaRoleIn,
     LoginIn,
     LoteCreateIn,
     LoteOut,
@@ -129,6 +130,9 @@ def api_bonita_login(
             "bonita_nombre": identity.display_name,
             "bonita_grupos": sorted(identity.group_paths),
             "bonita_roles": sorted(identity.roles),
+            "bonita_active_role": (
+                Rol.MUNICIPIO.value if Rol.MUNICIPIO.value in identity.roles else sorted(identity.roles)[0]
+            ),
         }
     )
     return BonitaIdentityOut(
@@ -137,6 +141,38 @@ def api_bonita_login(
         nombre=identity.display_name,
         grupos=sorted(identity.group_paths),
         roles=sorted(identity.roles),
+    )
+
+
+@router.post("/auth/bonita/role", response_model=BonitaIdentityOut)
+def api_bonita_role(body: BonitaRoleIn, request: Request):
+    username = request.session.get("bonita_username")
+    roles = request.session.get("bonita_roles", [])
+    if username is None:
+        raise HTTPException(status_code=401, detail="Iniciá sesión")
+    if body.role.value not in roles:
+        raise HTTPException(status_code=403, detail="Tu usuario Bonita no tiene ese rol")
+    request.session["bonita_active_role"] = body.role.value
+    return BonitaIdentityOut(
+        user_id=str(request.session["bonita_user_id"]),
+        username=username,
+        nombre=request.session.get("bonita_nombre", username),
+        grupos=sorted(request.session.get("bonita_grupos", [])),
+        roles=sorted(roles),
+    )
+
+
+@router.get("/auth/bonita/me", response_model=BonitaIdentityOut)
+def api_bonita_me(request: Request):
+    username = request.session.get("bonita_username")
+    if username is None:
+        raise HTTPException(status_code=401, detail="Iniciá sesión")
+    return BonitaIdentityOut(
+        user_id=str(request.session["bonita_user_id"]),
+        username=username,
+        nombre=request.session.get("bonita_nombre", username),
+        grupos=sorted(request.session.get("bonita_grupos", [])),
+        roles=sorted(request.session.get("bonita_roles", [])),
     )
 
 

@@ -91,6 +91,14 @@ class BonitaClient:
         resp.raise_for_status()
         return resp.json()
 
+    def actor_names(self, process_definition_id) -> dict:
+        """{id de actor: nombre} del proceso: sirve para saber a qué actor pertenece cada tarea."""
+        resp = self._request(
+            "GET", "/API/bpm/actor", params={"f": f"process_id={process_definition_id}", "p": 0, "c": 50}
+        )
+        resp.raise_for_status()
+        return {a["id"]: a["name"] for a in resp.json()}
+
     def user_name(self, user_id) -> str:
         """Username a partir del id numérico que devuelven 'started_by' y 'executedBy'."""
         resp = self._request("GET", f"/API/identity/user/{user_id}")

@@ -115,6 +115,14 @@ def test_get_archived_human_tasks_trae_el_ejecutor(client):
 
 
 @responses.activate
+def test_actor_names_mapea_id_de_actor_a_nombre(client):
+    responses.add(responses.GET, f"{BASE}/API/bpm/actor",
+                  json=[{"id": "620", "name": "centro de controlador regional"}, {"id": "621", "name": "Municipio"}])
+    assert client.actor_names("555") == {"620": "centro de controlador regional", "621": "Municipio"}
+    assert "process_id%3D555" in responses.calls[0].request.url or "process_id=555" in responses.calls[0].request.url
+
+
+@responses.activate
 def test_user_name_resuelve_el_id_numerico(client):
     responses.add(responses.GET, f"{BASE}/API/identity/user/101", json={"id": "101", "userName": "operador.municipal"})
     assert client.user_name("101") == "operador.municipal"
@@ -189,6 +197,7 @@ def test_todas_las_llamadas_llevan_timeout(monkeypatch):
         lambda: c.get_case("1"),
         lambda: c.get_archived_human_tasks("1"),
         lambda: c.user_name("101"),
+        lambda: c.actor_names("555"),
     ]
     for llamada in llamadas:
         with pytest.raises(requests.ConnectTimeout):

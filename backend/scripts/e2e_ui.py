@@ -36,6 +36,13 @@ TAREA_PUBLICAR = "Publicar Convocatoria"
 
 # Bonita tiene que registrar a estos mismos usuarios como iniciador del caso y ejecutor de cada
 # tarea, no a un genérico por rol ni al usuario técnico.
+# Actor del proceso al que debe pertenecer cada tarea humana (el que se mapea al grupo de esa lane).
+ACTOR_DE_TAREA = {
+    "Registrar Emergencia": "Municipio",
+    "Revisar Informacion": "centro de controlador regional",
+    "Publicar Convocatoria": "centro de controlador regional",
+    "Cargar Ofertas de Ayuda": "ONG",
+}
 USUARIO_MUNICIPAL = "operador.municipal"
 USUARIO_COORDINADOR = "coordinador.regional"
 
@@ -63,6 +70,17 @@ class Reporte:
 def tarea_activa(admin: BonitaClient, case_id) -> str:
     tareas = admin.get_human_tasks(case_id)
     return tareas[0]["displayName"] if tareas else "(ninguna)"
+
+
+def actor_de(admin: BonitaClient, case_id, prefijo: str) -> str:
+    """A qué actor del proceso pertenece la tarea (pendiente o ya hecha). Es lo que decide quién la ve como
+    suya en el portal de Bonita; el motor deja ejecutarla aunque el usuario no sea del actor, así que
+    solo se nota mirándolo."""
+    actores = admin.actor_names(admin.get_case(case_id)["processDefinitionId"])
+    for tarea in admin.get_human_tasks(case_id) + admin.get_archived_human_tasks(case_id):
+        if tarea["displayName"].startswith(prefijo):
+            return actores.get(tarea["actorId"], tarea["actorId"])
+    return "(sin tarea)"
 
 
 def esperar_tarea(admin: BonitaClient, case_id, prefijo: str, segundos: int) -> bool:
@@ -195,6 +213,13 @@ def fase_bonita_alta(r: Reporte, admin: BonitaClient, emergencia_id: int, case_i
     ejecutor = ejecutada_por(admin, case_id, "Registrar Emergencia")
     r.check(f"'Registrar Emergencia' la ejecutó '{USUARIO_MUNICIPAL}'", ejecutor == USUARIO_MUNICIPAL, ejecutor)
 
+    r.fase("Bonita: cada tarea pertenece al actor de su lane")
+    for prefijo, esperado in ACTOR_DE_TAREA.items():
+        if prefijo in (TAREA_TRAS_PUBLICAR, TAREA_PUBLICAR):
+            continue  # todavía no llegó el caso
+        actor = actor_de(admin, case_id, prefijo)
+        r.check(f"'{prefijo}…' es del actor '{esperado}'", actor == esperado, actor)
+
 
 def fase_lotes_y_publicacion(u: Ui, app: str, emergencia_id: int, espera: int) -> datetime:
     u.r.fase("Centro Coordinador: lotes y publicación")
@@ -240,6 +265,10 @@ def fase_bonita_publicacion(r: Reporte, admin: BonitaClient, case_id: int, fin: 
     for prefijo in (TAREA_TRAS_ALTA, TAREA_PUBLICAR):
         ejecutor = ejecutada_por(admin, case_id, prefijo)
         r.check(f"'{prefijo}…' la ejecutó '{USUARIO_COORDINADOR}'", ejecutor == USUARIO_COORDINADOR, ejecutor)
+    for prefijo in (TAREA_PUBLICAR, TAREA_TRAS_PUBLICAR):
+        esperado = ACTOR_DE_TAREA[prefijo]
+        actor = actor_de(admin, case_id, prefijo)
+        r.check(f"'{prefijo}…' es del actor '{esperado}'", actor == esperado, actor)
 
 
 def cargar_oferta(u: Ui, cantidades: list[str]) -> None:

@@ -40,6 +40,7 @@ export type Oferta = {
   id: number;
   emergencia_id: number;
   ong_id: number;
+  ong_nombre: string;
   version_actual: number;
   items: { lote_id: number; recurso: string; cantidad: number; version: number }[];
 };

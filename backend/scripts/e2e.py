@@ -266,6 +266,41 @@ def fase_ong_publicada(r: Reporte, app: str, ong: Cliente, emergencia_id: int, v
                      {"ventana_fin": ventana.isoformat()}).status_code == 403)
 
 
+def api_login(app: str, username: str) -> requests.Session:
+    """Sesión contra la API JSON de la SPA (las ofertas no tienen pantalla Jinja)."""
+    s = requests.Session()
+    s.post(f"{app}/api/auth/login", json={"username": username, "password": DEMO_PASSWORD}, timeout=30)
+    return s
+
+
+def oferta(s: requests.Session, app: str, emergencia_id: int, cantidades: dict[int, int]) -> requests.Response:
+    items = [{"lote_id": l, "recurso": "e2e", "cantidad": c} for l, c in cantidades.items()]
+    return s.post(f"{app}/api/emergencias/{emergencia_id}/ofertas", json={"items": items}, timeout=30)
+
+
+def fase_ofertas(r: Reporte, app: str, emergencia_id: int) -> requests.Session:
+    r.fase("ONGs: ofertas versionadas (API de la SPA)")
+    agua, frazadas = id_de_lote(emergencia_id, "Agua potable"), id_de_lote(emergencia_id, "Frazadas")
+    cruz = api_login(app, "ong.cruzroja")
+    v1 = oferta(cruz, app, emergencia_id, {agua: 3000, frazadas: 500})
+    r.check("Cruz Roja oferta dos lotes en una versión",
+            v1.status_code == 201 and v1.json()["version_actual"] == 1 and len(v1.json()["items"]) == 2, v1.text)
+    v2 = oferta(cruz, app, emergencia_id, {agua: 4000})
+    r.check("Reenviar crea la versión 2 y reemplaza los ítems",
+            v2.status_code == 201 and v2.json()["version_actual"] == 2 and len(v2.json()["items"]) == 1, v2.text)
+    r.check("Cantidad 0 rechazada (422)", oferta(cruz, app, emergencia_id, {agua: 0}).status_code == 422)
+    bomb = api_login(app, "ong.bomberos")
+    r.check("Bomberos oferta sobre la misma convocatoria",
+            oferta(bomb, app, emergencia_id, {frazadas: 300}).status_code == 201)
+    propias = bomb.get(f"{app}/api/emergencias/{emergencia_id}/ofertas", timeout=30).json()
+    r.check("Cada ONG ve solo su oferta", [o["ong_nombre"] for o in propias] == ["Bomberos Voluntarios"], str(propias))
+    todas = api_login(app, "coordinador.regional").get(f"{app}/api/emergencias/{emergencia_id}/ofertas", timeout=30).json()
+    r.check("El Coordinador ve las dos ofertas", len(todas) == 2, str(todas))
+    muni = api_login(app, "operador.municipal")
+    r.check("El Municipio no puede ofertar (403)", oferta(muni, app, emergencia_id, {agua: 1}).status_code == 403)
+    return cruz
+
+
 def fase_auditor(r: Reporte, app: str, emergencia_id: int, ventana: datetime) -> None:
     r.fase("Auditor: consulta sin poder operar")
     aud = Cliente(app)
@@ -284,7 +319,8 @@ def fase_auditor(r: Reporte, app: str, emergencia_id: int, ventana: datetime) ->
     r.check("Después del logout no se accede", aud.get("/emergencias").status_code == 303)
 
 
-def fase_timer(r: Reporte, admin: BonitaClient, case_id: int, ventana: datetime, espera: int) -> None:
+def fase_timer(r: Reporte, admin: BonitaClient, case_id: int, ventana: datetime, espera: int,
+               app: str, ong: requests.Session, emergencia_id: int) -> None:
     r.fase(f"Boundary timer: esperando el cierre de la ventana ({espera} s)")
     faltan = (ventana - datetime.now().astimezone()).total_seconds()
     if faltan > 0:
@@ -292,6 +328,8 @@ def fase_timer(r: Reporte, admin: BonitaClient, case_id: int, ventana: datetime,
     ok = esperar_tarea(admin, case_id, TAREA_TRAS_TIMER, 180)
     r.check(f"El timer disparó y el caso avanzó a '{TAREA_TRAS_TIMER}…'", ok, tarea_activa(admin, case_id))
     r.check(f"'{TAREA_TRAS_PUBLICAR}' se cerró sola", admin.find_task(case_id, TAREA_TRAS_PUBLICAR) is None)
+    resp = oferta(ong, app, emergencia_id, {id_de_lote(emergencia_id, "Agua potable"): 1})
+    r.check("Con la ventana cerrada la app rechaza ofertas", resp.status_code == 400, f"{resp.status_code} {resp.text}")
 
 
 def main() -> int:
@@ -323,10 +361,11 @@ def main() -> int:
     fase_bonita_publicacion(r, admin, case_id, ventana)
     fase_ya_publicada(r, coord, emergencia_id, ventana)
     fase_ong_publicada(r, args.app, ong, emergencia_id, ventana)
+    ong_api = fase_ofertas(r, args.app, emergencia_id)
     fase_auditor(r, args.app, emergencia_id, ventana)
 
     if args.timer:
-        fase_timer(r, admin, case_id, ventana, args.timer)
+        fase_timer(r, admin, case_id, ventana, args.timer, args.app, ong_api, emergencia_id)
     return r.resumen()
 
 

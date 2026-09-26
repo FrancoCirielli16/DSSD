@@ -78,6 +78,17 @@ publicación (ventana inválida, ventana guardada en Bonita, inmutabilidad poste
 visibilidad de la convocatoria para las ONGs, consulta del Auditor y logout. Con
 `--timer`, además, que el motor cierre solo la ventana y avance a `Evaluar Cobertura…`.
 
+`scripts/e2e_ui.py` hace el mismo recorrido **en un navegador real** (Playwright + Chrome) contra la
+SPA React: login de los 5 perfiles, alta, lotes, publicación, ofertas versionadas de dos ONGs,
+Auditor y, con `--timer`, el cierre por timer. Además de la pantalla verifica Bonita y deja una
+captura por paso en `scripts/capturas/` (gitignoreado). Necesita backend (`:8001`) y `npm run dev`.
+
+```bash
+python scripts/e2e_ui.py              # headless, ~1 min (49 verificaciones con --timer 120)
+python scripts/e2e_ui.py --demo       # navegador visible y lento, para mostrarlo
+```
+Usa el Chrome instalado; sin Chrome, `playwright install chromium`.
+
 ## Login y roles (T-04)
 
 Sesión por cookie firmada (`SESSION_SECRET`). Usuarios de demo (`python -m app.seed`,

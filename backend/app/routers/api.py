@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -194,6 +196,17 @@ def api_publicar(
     return _emergencia_out(full or publicada)
 
 
+def _oferta_out(o: Oferta) -> OfertaOut:
+    return OfertaOut(
+        id=o.id,
+        emergencia_id=o.emergencia_id,
+        ong_id=o.ong_id,
+        ong_nombre=o.ong.nombre,
+        version_actual=o.version_actual,
+        items=[OfertaItemOut.model_validate(i) for i in o.items if i.version == o.version_actual],
+    )
+
+
 @router.get("/emergencias/{emergencia_id}/ofertas", response_model=list[OfertaOut])
 def api_listar_ofertas(
     emergencia_id: int,
@@ -201,24 +214,11 @@ def api_listar_ofertas(
     db: Session = Depends(get_db),
 ):
     _require_visible(db, user, emergencia_id)
-    ofertas = db.scalars(
-        select(Oferta)
-        .where(Oferta.emergencia_id == emergencia_id)
-        .options(selectinload(Oferta.items))
-    ).all()
-    result = []
-    for o in ofertas:
-        items = [OfertaItemOut.model_validate(i) for i in o.items if i.version == o.version_actual]
-        result.append(
-            OfertaOut(
-                id=o.id,
-                emergencia_id=o.emergencia_id,
-                ong_id=o.ong_id,
-                version_actual=o.version_actual,
-                items=items,
-            )
-        )
-    return result
+    query = select(Oferta).where(Oferta.emergencia_id == emergencia_id)
+    if user.rol is Rol.ONG:  # una ONG no ve las ofertas de las demás
+        query = query.where(Oferta.ong_id == user.ong_id)
+    ofertas = db.scalars(query.options(selectinload(Oferta.items), selectinload(Oferta.ong))).all()
+    return [_oferta_out(o) for o in ofertas]
 
 
 @router.post("/emergencias/{emergencia_id}/ofertas", response_model=OfertaOut, status_code=201)
@@ -228,13 +228,25 @@ def api_crear_oferta(
     user: Usuario = Depends(require_role(Rol.ONG)),
     db: Session = Depends(get_db),
 ):
+    """Cada envío es la oferta completa: una versión nueva con todos sus ítems (T-12)."""
     from app.models import EstadoEmergencia
 
     emergencia = _require_visible(db, user, emergencia_id)
     if emergencia.estado is not EstadoEmergencia.CONVOCATORIA:
         raise HTTPException(status_code=400, detail="La convocatoria no está abierta")
+    fin = emergencia.ventana_ofertas_fin
+    if fin is not None and fin.replace(tzinfo=fin.tzinfo or timezone.utc) <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="La ventana de ofertas ya cerró")
     if user.ong_id is None:
         raise HTTPException(status_code=400, detail="Tu usuario no tiene ONG asignada")
+
+    lote_ids = {l.id for l in emergencia.lotes}
+    pedidos = [item.lote_id for item in body.items]
+    if len(set(pedidos)) != len(pedidos):
+        raise HTTPException(status_code=400, detail="Hay lotes repetidos en la oferta")
+    for lote_id in pedidos:
+        if lote_id not in lote_ids:
+            raise HTTPException(status_code=400, detail=f"Lote {lote_id} inválido")
 
     oferta = db.scalar(
         select(Oferta).where(Oferta.emergencia_id == emergencia_id, Oferta.ong_id == user.ong_id)
@@ -243,19 +255,14 @@ def api_crear_oferta(
         oferta = Oferta(emergencia_id=emergencia_id, ong_id=user.ong_id, version_actual=1)
         db.add(oferta)
         db.flush()
-        version = 1
     else:
         oferta.version_actual += 1
-        version = oferta.version_actual
 
-    lote_ids = {l.id for l in emergencia.lotes}
     for item in body.items:
-        if item.lote_id not in lote_ids:
-            raise HTTPException(status_code=400, detail=f"Lote {item.lote_id} inválido")
         db.add(
             OfertaItem(
                 oferta_id=oferta.id,
-                version=version,
+                version=oferta.version_actual,
                 lote_id=item.lote_id,
                 recurso=item.recurso,
                 cantidad=item.cantidad,
@@ -263,15 +270,4 @@ def api_crear_oferta(
         )
     db.commit()
     db.refresh(oferta)
-    items = db.scalars(
-        select(OfertaItem).where(
-            OfertaItem.oferta_id == oferta.id, OfertaItem.version == oferta.version_actual
-        )
-    ).all()
-    return OfertaOut(
-        id=oferta.id,
-        emergencia_id=oferta.emergencia_id,
-        ong_id=oferta.ong_id,
-        version_actual=oferta.version_actual,
-        items=[OfertaItemOut.model_validate(i) for i in items],
-    )
+    return _oferta_out(oferta)

@@ -156,7 +156,7 @@ def main():
     parser.add_argument("--process-version", default="1.0")
     parser.add_argument("--emergencia-id", type=int, required=True)
     parser.add_argument("--municipio-id", type=int, required=True)
-    parser.add_argument("--nivel-gravedad", required=True, choices=["BAJO", "MEDIO", "ALTO"])
+    parser.add_argument("--nivel-gravedad", required=True, choices=["BAJO", "MEDIO", "ALTO", "CRITICO"])
     parser.add_argument(
         "--ventana-ofertas-iso",
         required=True,

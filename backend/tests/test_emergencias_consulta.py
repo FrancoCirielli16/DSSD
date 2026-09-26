@@ -1,4 +1,4 @@
-"""Listado y detalle de emergencias: qué ve cada perfil."""
+"""Listado y detalle de emergencias por la API: qué ve cada perfil."""
 from datetime import datetime, timezone
 
 import pytest
@@ -30,65 +30,55 @@ def emergencias(seeded):
         return propia.id, ajena.id
 
 
+def _ids(c):
+    return [e["id"] for e in c.get("/api/emergencias").json()]
+
+
 def test_listado_exige_sesion(client):
-    assert client.get("/emergencias").status_code == 303
+    assert client.get("/api/emergencias").status_code == 401
 
 
 def test_municipio_ve_solo_las_de_su_municipio(login, emergencias):
     propia, ajena = emergencias
     c = login("operador.municipal")
-    r = c.get("/emergencias")
-    assert f'href="/emergencias/{propia}"' in r.text
-    assert f'href="/emergencias/{ajena}"' not in r.text
-    assert c.get(f"/emergencias/{ajena}").status_code == 404
+    assert _ids(c) == [propia]
+    assert c.get(f"/api/emergencias/{ajena}").status_code == 404
 
 
 @pytest.mark.parametrize("usuario", ["coordinador.regional", "auditor"])
 def test_coordinador_y_auditor_ven_todas(login, emergencias, usuario):
     c = login(usuario)
-    r = c.get("/emergencias")
+    assert set(_ids(c)) == set(emergencias)
     for eid in emergencias:
-        assert f'href="/emergencias/{eid}"' in r.text
-        assert c.get(f"/emergencias/{eid}").status_code == 200
+        assert c.get(f"/api/emergencias/{eid}").status_code == 200
 
 
 def test_ong_ve_solo_convocatorias_abiertas(login, emergencias):
     propia, ajena = emergencias
     c = login("ong.bomberos")
-    r = c.get("/emergencias")
-    assert "Convocatorias abiertas" in r.text
-    assert f'href="/emergencias/{ajena}"' in r.text
-    assert f'href="/emergencias/{propia}"' not in r.text
-    assert c.get(f"/emergencias/{propia}").status_code == 404
+    assert _ids(c) == [ajena]
+    assert c.get(f"/api/emergencias/{propia}").status_code == 404
 
 
 def test_detalle_muestra_datos_caso_y_lotes(login, emergencias):
     _, ajena = emergencias
-    r = login("coordinador.regional").get(f"/emergencias/{ajena}")
-    assert "Tres Arroyos" in r.text and "Foco activo" in r.text and "#12" in r.text
-    assert "Brigadistas · 20 personas" in r.text and "Apoyo" in r.text
-    assert "Convocatoria abierta" in r.text
+    d = login("coordinador.regional").get(f"/api/emergencias/{ajena}").json()
+    assert (d["municipio_nombre"], d["descripcion"], d["bonita_case_id"]) == ("Tres Arroyos", "Foco activo", 12)
+    assert [(l["recurso"], l["cantidad"], l["unidad"], l["tipo"]) for l in d["lotes"]] == [
+        ("Brigadistas", 20, "personas", "APOYO")]
+    assert d["estado"] == "CONVOCATORIA"
 
 
-def test_fecha_se_muestra_en_hora_local(login, emergencias):
-    from app.core.templating import fecha
-
+def test_las_fechas_salen_con_zona_utc(login, emergencias):
+    """La SPA las convierte a hora local: sin la 'Z' (o el offset) las leería como locales."""
     propia, _ = emergencias
-    r = login("operador.municipal").get(f"/emergencias/{propia}")
-    assert fecha(datetime(2026, 9, 22, 13, 0, tzinfo=timezone.utc)) in r.text
+    d = login("operador.municipal").get(f"/api/emergencias/{propia}").json()
+    assert d["creada_en"].endswith(("Z", "+00:00"))
 
 
-def test_fecha_sin_zona_se_interpreta_como_utc():
-    from app.core.templating import fecha
-
-    assert fecha(datetime(2026, 9, 22, 13, 0)) == fecha(datetime(2026, 9, 22, 13, 0, tzinfo=timezone.utc))
-    assert fecha(None) == "—"
-
-
-def test_emergencia_inexistente_da_404_con_pagina(login):
-    r = login("coordinador.regional").get("/emergencias/999")
-    assert r.status_code == 404
-    assert "Emergencia no encontrada" in r.text
+def test_emergencia_inexistente_da_404(login):
+    r = login("coordinador.regional").get("/api/emergencias/999")
+    assert r.status_code == 404 and "no encontrada" in r.json()["detail"]
 
 
 # --- tarea pendiente de Bonita, mostrada a la ONG en la SPA (GET /api/emergencias/{id}) ---

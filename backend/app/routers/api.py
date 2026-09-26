@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.config import Settings, get_settings
 from app.core.deps import require_role
 from app.core.security import verify_password
-from app.core.templating import ROL_LABEL, TIPO_LABEL
+from app.core.labels import ROL_LABEL, TIPO_LABEL
 from app.db import get_db
 from app.models import Emergencia, Oferta, OfertaItem, Rol, Usuario
 from app.schemas.api import (

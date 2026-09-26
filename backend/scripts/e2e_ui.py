@@ -24,14 +24,67 @@ from pathlib import Path
 from playwright.sync_api import Page, sync_playwright
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from app.core.config import get_settings  # noqa: E402
 from app.integrations.bonita import BonitaClient  # noqa: E402
 from app.seed import DEMO_PASSWORD  # noqa: E402
-from e2e import (  # noqa: E402
-    TAREA_TRAS_ALTA, TAREA_TRAS_PUBLICAR, TAREA_TRAS_TIMER, Reporte, esperar_tarea, tarea_activa,
-)
+
+TAREA_TRAS_ALTA = "Revisar Informacion"
+TAREA_TRAS_PUBLICAR = "Cargar Ofertas de Ayuda"
+TAREA_TRAS_TIMER = "Evaluar Cobertura"
+TAREA_PUBLICAR = "Publicar Convocatoria"
+
+# Bonita tiene que registrar a estos mismos usuarios como iniciador del caso y ejecutor de cada
+# tarea, no a un genérico por rol ni al usuario técnico.
+USUARIO_MUNICIPAL = "operador.municipal"
+USUARIO_COORDINADOR = "coordinador.regional"
+
+
+class Reporte:
+    def __init__(self) -> None:
+        self.fallas = 0
+        self.total = 0
+
+    def fase(self, titulo: str) -> None:
+        print(f"\n== {titulo}")
+
+    def check(self, nombre: str, ok: bool, detalle: str = "") -> bool:
+        self.total += 1
+        if not ok:
+            self.fallas += 1
+        print(f"  [{'OK   ' if ok else 'FALLA'}] {nombre}" + ("" if ok else f"  -> {detalle}"))
+        return ok
+
+    def resumen(self) -> int:
+        print(f"\n{self.total - self.fallas}/{self.total} verificaciones OK")
+        return 1 if self.fallas else 0
+
+
+def tarea_activa(admin: BonitaClient, case_id) -> str:
+    tareas = admin.get_human_tasks(case_id)
+    return tareas[0]["displayName"] if tareas else "(ninguna)"
+
+
+def esperar_tarea(admin: BonitaClient, case_id, prefijo: str, segundos: int) -> bool:
+    limite = time.monotonic() + segundos
+    while time.monotonic() < limite:
+        if admin.find_task(case_id, prefijo) is not None:
+            return True
+        time.sleep(5)
+    return False
+
+
+def iniciado_por(admin: BonitaClient, case_id) -> str:
+    return admin.user_name(admin.get_case(case_id)["started_by"])
+
+
+def ejecutada_por(admin: BonitaClient, case_id, prefijo: str) -> str:
+    """Quién completó esa tarea según el historial del motor, no según lo que cree la app."""
+    for tarea in admin.get_archived_human_tasks(case_id):
+        if tarea["displayName"].startswith(prefijo):
+            return admin.user_name(tarea["executedBy"])
+    return "(no ejecutada)"
+
 
 CAPTURAS = Path(__file__).resolve().parent / "capturas"
 LOTES = [("Brigadistas forestales", "30", "personas", "PRINCIPAL"),
@@ -136,6 +189,12 @@ def fase_bonita_alta(r: Reporte, admin: BonitaClient, emergencia_id: int, case_i
             v.get("emergenciaId") == str(emergencia_id) and v.get("nivelGravedad") == "CRITICO",
             str({k: v.get(k) for k in ("emergenciaId", "nivelGravedad")}))
 
+    r.fase("Bonita: trazabilidad del alta (¿quién figura que lo hizo?)")
+    inicio = iniciado_por(admin, case_id)
+    r.check(f"El caso lo inició '{USUARIO_MUNICIPAL}', no el usuario técnico", inicio == USUARIO_MUNICIPAL, inicio)
+    ejecutor = ejecutada_por(admin, case_id, "Registrar Emergencia")
+    r.check(f"'Registrar Emergencia' la ejecutó '{USUARIO_MUNICIPAL}'", ejecutor == USUARIO_MUNICIPAL, ejecutor)
+
 
 def fase_lotes_y_publicacion(u: Ui, app: str, emergencia_id: int, espera: int) -> datetime:
     u.r.fase("Centro Coordinador: lotes y publicación")
@@ -178,6 +237,9 @@ def fase_bonita_publicacion(r: Reporte, admin: BonitaClient, case_id: int, fin: 
     guardada = admin.get_case_variables(case_id).get("ventanaOfertasISO", "")
     r.check("ventanaOfertasISO = el cierre elegido en la pantalla",
             datetime.fromisoformat(guardada) == fin, f"{guardada} vs {fin.isoformat()}")
+    for prefijo in (TAREA_TRAS_ALTA, TAREA_PUBLICAR):
+        ejecutor = ejecutada_por(admin, case_id, prefijo)
+        r.check(f"'{prefijo}…' la ejecutó '{USUARIO_COORDINADOR}'", ejecutor == USUARIO_COORDINADOR, ejecutor)
 
 
 def cargar_oferta(u: Ui, cantidades: list[str]) -> None:

@@ -13,7 +13,6 @@ from app.models import Emergencia, Oferta, OfertaItem, Rol, Usuario
 from app.schemas.api import (
     EmergenciaOut,
     LoginIn,
-    LoteCreateIn,
     LoteOut,
     OfertaIn,
     OfertaItemOut,
@@ -153,13 +152,13 @@ def api_detalle(
 @router.post("/emergencias/{emergencia_id}/lotes", response_model=LoteOut, status_code=201)
 def api_crear_lote(
     emergencia_id: int,
-    body: LoteCreateIn,
+    body: LoteIn,
     user: Usuario = Depends(require_role(Rol.COORDINADOR)),
     db: Session = Depends(get_db),
 ):
     emergencia = _require_visible(db, user, emergencia_id)
     try:
-        lote = agregar_lote(db, emergencia, LoteIn(**body.model_dump()))
+        lote = agregar_lote(db, emergencia, body)
     except LoteError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return lote

@@ -56,13 +56,6 @@ class EmergenciaOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class LoteCreateIn(BaseModel):
-    recurso: str = Field(min_length=1, max_length=120)
-    cantidad: int = Field(gt=0)
-    unidad: str = Field(min_length=1, max_length=30)
-    tipo: TipoLote = TipoLote.PRINCIPAL
-
-
 class PublicarIn(BaseModel):
     ventana_fin: datetime
 

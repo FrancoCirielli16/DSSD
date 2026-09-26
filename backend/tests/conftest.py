@@ -63,8 +63,8 @@ def client(seeded):
 @pytest.fixture
 def login(client):
     def _login(username: str):
-        r = client.post("/login", data={"username": username, "password": PASSWORD})
-        assert r.status_code == 303, f"login de {username} falló: {r.status_code}"
+        r = client.post("/api/auth/login", json={"username": username, "password": PASSWORD})
+        assert r.status_code == 200, f"login de {username} falló: {r.status_code}"
         return client
 
     return _login

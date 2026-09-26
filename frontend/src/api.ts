@@ -28,6 +28,7 @@ export type Emergencia = {
   municipio_nombre: string | null;
   municipio_provincia: string | null;
   lotes: Lote[];
+  tarea_bonita?: string | null;
 };
 
 export type Meta = {

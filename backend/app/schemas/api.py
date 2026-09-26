@@ -50,6 +50,8 @@ class EmergenciaOut(BaseModel):
     municipio_nombre: str | None = None
     municipio_provincia: str | None = None
     lotes: list[LoteOut] = []
+    # Tarea que Bonita tiene pendiente para quien consulta; solo el detalle la completa.
+    tarea_bonita: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

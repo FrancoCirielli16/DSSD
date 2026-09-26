@@ -29,6 +29,7 @@ from app.services.emergencias import (
     emergencia_visible,
     emergencias_visibles,
     registrar_emergencia,
+    tarea_ong_en_bonita,
 )
 from app.services.lotes import (
     LoteError,
@@ -141,8 +142,12 @@ def api_detalle(
     emergencia_id: int,
     user: Usuario = Depends(require_role()),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
-    return _emergencia_out(_require_visible(db, user, emergencia_id))
+    emergencia = _require_visible(db, user, emergencia_id)
+    out = _emergencia_out(emergencia)
+    out.tarea_bonita = tarea_ong_en_bonita(settings, emergencia, user)
+    return out
 
 
 @router.post("/emergencias/{emergencia_id}/lotes", response_model=LoteOut, status_code=201)

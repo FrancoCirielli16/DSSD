@@ -2,8 +2,12 @@
 from datetime import datetime, timezone
 
 import pytest
+import responses
 
+from app.core.config import get_settings
 from app.models import Emergencia, EstadoEmergencia, Gravedad, Lote, Municipio, TipoLote
+
+BASE = get_settings().bonita_base_url
 
 
 @pytest.fixture
@@ -85,3 +89,52 @@ def test_emergencia_inexistente_da_404_con_pagina(login):
     r = login("coordinador.regional").get("/emergencias/999")
     assert r.status_code == 404
     assert "Emergencia no encontrada" in r.text
+
+
+# --- tarea pendiente de Bonita, mostrada a la ONG en la SPA (GET /api/emergencias/{id}) ---
+
+
+def _mock_login_y_tarea(tarea: dict | None):
+    responses.add(responses.POST, f"{BASE}/loginservice", status=204,
+                  headers={"Set-Cookie": "X-Bonita-API-Token=tok; Path=/"})
+    responses.add(responses.GET, f"{BASE}/API/bpm/humanTask", json=[tarea] if tarea else [])
+
+
+@responses.activate
+def test_ong_ve_su_tarea_pendiente_en_bonita(login, emergencias):
+    _, ajena = emergencias
+    _mock_login_y_tarea({"id": "1", "displayName": "Cargar Ofertas de Ayuda"})
+
+    r = login("ong.bomberos").get(f"/api/emergencias/{ajena}")
+
+    assert r.json()["tarea_bonita"] == "Cargar Ofertas de Ayuda"
+    login_call = next(c for c in responses.calls if c.request.url.endswith("/loginservice"))
+    assert "username=ong.bomberos" in login_call.request.body
+
+
+@responses.activate
+def test_sin_tarea_pendiente_no_hay_nada_que_mostrar(login, emergencias):
+    """Bonita ya cerró la tarea (venció la ventana) o la convocatoria recién arranca."""
+    _, ajena = emergencias
+    _mock_login_y_tarea(None)
+
+    assert login("ong.bomberos").get(f"/api/emergencias/{ajena}").json()["tarea_bonita"] is None
+
+
+@responses.activate
+def test_si_bonita_no_responde_el_detalle_igual_se_devuelve(login, emergencias):
+    _, ajena = emergencias
+    responses.add(responses.POST, f"{BASE}/loginservice", status=500)
+
+    r = login("ong.bomberos").get(f"/api/emergencias/{ajena}")
+
+    assert r.status_code == 200 and r.json()["tarea_bonita"] is None
+
+
+def test_a_otros_perfiles_y_al_listado_no_se_les_consulta_bonita(login, emergencias):
+    """Sin @responses.activate: si el código llamara a Bonita, esto fallaría con un error de red."""
+    _, ajena = emergencias
+    for usuario in ("coordinador.regional", "auditor"):
+        r = login(usuario).get(f"/api/emergencias/{ajena}")
+        assert r.status_code == 200 and r.json()["tarea_bonita"] is None
+    assert login("ong.bomberos").get("/api/emergencias").status_code == 200

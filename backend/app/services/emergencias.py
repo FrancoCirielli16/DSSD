@@ -18,6 +18,8 @@ from app.core.config import Settings
 from app.integrations.bonita import BonitaClient, BonitaError
 from app.models import Emergencia, EstadoEmergencia, Gravedad, Rol, Usuario
 
+TAREA_CARGAR_OFERTAS = "Cargar Ofertas de Ayuda"
+
 
 def _filtro_visibilidad(user: Usuario):
     """Qué emergencias ve cada perfil. Coordinador y Auditor ven todas."""
@@ -126,3 +128,19 @@ def registrar_emergencia(
     db.commit()
     db.refresh(emergencia)
     return emergencia
+
+
+def tarea_ong_en_bonita(settings: Settings, emergencia: Emergencia, user: Usuario) -> str | None:
+    """Nombre de la tarea que Bonita tiene pendiente para ESTE representante en este caso, o
+    None si no hay ninguna: la convocatoria no está abierta, la ventana ya venció (el timer la
+    cerró) o Bonita no respondió. Puramente informativo: la app nunca completa esta tarea (ver
+    "Reglas para la app web" en CLAUDE.md), así que un fallo acá no debe romper la página."""
+    if user.rol is not Rol.ONG or emergencia.bonita_case_id is None:
+        return None
+    try:
+        client = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
+        client.login(user.username, settings.bonita_test_password)
+        tarea = client.find_task(emergencia.bonita_case_id, TAREA_CARGAR_OFERTAS)
+    except (BonitaError, requests.RequestException):
+        return None
+    return tarea["displayName"] if tarea else None

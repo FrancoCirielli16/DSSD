@@ -580,6 +580,12 @@ export function DetallePage() {
         />
         {error && <div className="alert">{error}</div>}
         {ok && <div className="alert ok">{ok}</div>}
+        {e.tarea_bonita && (
+          <div className="alert ok" data-testid="tarea-bonita">
+            <strong>Bonita:</strong> tenés pendiente la tarea «{e.tarea_bonita}». Se cierra sola cuando vence la
+            ventana de ofertas; no hace falta completarla, cargá tu oferta abajo.
+          </div>
+        )}
 
         <div className="meta-grid">
           <div className="meta-item">

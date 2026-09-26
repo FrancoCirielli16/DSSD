@@ -195,6 +195,7 @@ def fase_ongs(u: Ui, app: str, emergencia_id: int) -> None:
     u.abrir(app, emergencia_id)
     u.r.check("La ONG no ve formularios de lotes ni de publicación",
               u.page.get_by_text("Agregar lote").count() == 0 and u.page.get_by_text("Publicar a la red").count() == 0)
+    u.ve("tenés pendiente la tarea «Cargar Ofertas de Ayuda»", "Bonita: la ONG ve su tarea pendiente, sin botón para completarla")
 
     cargar_oferta(u, ["0", "0", "0", "0"])
     u.ve("al menos un lote", "Oferta vacía: pide cargar algo")

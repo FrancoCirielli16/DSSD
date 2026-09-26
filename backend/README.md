@@ -1,6 +1,6 @@
 # RescueSync — backend
 
-App web (FastAPI + Jinja2 + HTMX + Bootstrap). Esqueleto de la Entrega 2 (T-02).
+API de RescueSync (FastAPI + SQLAlchemy). La interfaz es la SPA de `frontend/`; acá solo hay JSON bajo `/api`.
 
 ## Correr
 
@@ -26,15 +26,13 @@ Cambios de modelo: editar `app/models/entities.py` y correr
 
 ```
 app/
-  main.py          # crea la app, monta /static, registra routers
-  core/            # config (variables de entorno) y templating
-  routers/         # rutas HTTP (páginas y endpoints /api/...), una por dominio
+  main.py          # crea la app y registra el router de /api
+  core/            # config (variables de entorno), permisos por rol y textos
+  routers/         # endpoints /api/...
   services/        # lógica de negocio; los routers solo la llaman
   models/          # modelos SQLAlchemy (T-03)
   schemas/         # esquemas Pydantic de entrada/salida
   integrations/    # clientes externos (Bonita)
-  templates/       # Jinja2 (base.html + una plantilla por pantalla)
-  static/          # css/js propios
 ```
 
 Convención: router → service → models/integrations. Los routers no
@@ -62,29 +60,13 @@ Regla: cada pieza nueva (endpoint, pantalla, servicio) entra con sus tests.
 
 ## End-to-end automático (T-14)
 
-`scripts/e2e.py` recorre el flujo completo con los cinco usuarios de demo contra la app
-y Bonita **reales**, y verifica los dos lados: lo que muestra la pantalla y en qué tarea
-quedó el caso. Necesita Studio con el proceso desplegado, la base migrada + seedeada y
-`uvicorn app.main:app` corriendo.
-
-```bash
-python scripts/e2e.py                 # 47 verificaciones, ~30 s
-python scripts/e2e.py --timer 90      # + espera a que dispare el boundary timer (~3 min)
-```
-
-Cubre: acceso anónimo, login y los 403 de cada rol, alta de emergencia (y que recargar
-no la duplique), contrato en las variables del caso, carga/borrado/validación de lotes,
-publicación (ventana inválida, ventana guardada en Bonita, inmutabilidad posterior),
-visibilidad de la convocatoria para las ONGs, consulta del Auditor y logout. Con
-`--timer`, además, que el motor cierre solo la ventana y avance a `Evaluar Cobertura…`.
-
-`scripts/e2e_ui.py` hace el mismo recorrido **en un navegador real** (Playwright + Chrome) contra la
+`scripts/e2e_ui.py` recorre el flujo completo con los cinco usuarios de demo **en un navegador real** (Playwright + Chrome) contra la
 SPA React: login de los 5 perfiles, alta, lotes, publicación, ofertas versionadas de dos ONGs,
-Auditor y, con `--timer`, el cierre por timer. Además de la pantalla verifica Bonita y deja una
+Auditor y, con `--timer`, el cierre por timer. Además de la pantalla verifica Bonita (tarea activa, variables, quién inició el caso y quién ejecutó cada tarea) y deja una
 captura por paso en `scripts/capturas/` (gitignoreado). Necesita backend (`:8001`) y `npm run dev`.
 
 ```bash
-python scripts/e2e_ui.py              # headless, ~1 min (49 verificaciones con --timer 120)
+python scripts/e2e_ui.py              # headless, ~1 min (50 verificaciones; 54 con --timer 90)
 python scripts/e2e_ui.py --demo       # navegador visible y lento, para mostrarlo
 ```
 Usa el Chrome instalado; sin Chrome, `playwright install chromium`.

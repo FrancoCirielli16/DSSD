@@ -18,10 +18,10 @@ entrega-2/           Archivo vivo del proceso Bonita de la Entrega 2 (1/10):
   ACME.xml            la organización activa (usuarios y grupos de prueba).
 bonita/               Cliente REST de Bonita standalone (CLI) y notas sobre
                      qué se puede automatizar en Bonita Studio Community.
-backend/              La app web: FastAPI + SQLAlchemy + Alembic, Jinja2 +
-                     HTMX + Bootstrap. Ver backend/README.md.
-frontend/             Islas de React (Vite + TypeScript) para las pantallas
-                     más interactivas; se compilan dentro de backend/.
+backend/              La API: FastAPI + SQLAlchemy + Alembic (solo JSON, bajo
+                     /api). Ver backend/README.md.
+frontend/             La interfaz: SPA de React (Vite + TypeScript). Habla con
+                     la API por /api; no hay páginas HTML en el backend.
 docker-compose.yml    Postgres 16 para el backend (opcional, ver más abajo).
 teorias/              Material de la materia.
 ```
@@ -114,36 +114,23 @@ persistida y el caso instanciado y avanzado en Bonita.
 Detalle de la estructura del backend, cómo correr los tests y cómo proteger
 una ruta por rol: **`backend/README.md`**.
 
-### 3. Frontend de React (islas)
+### 3. Frontend de React (SPA)
 
-Casi toda la app son páginas Jinja + HTMX. Las pantallas muy interactivas
-(el editor de ofertas, más adelante el dashboard) son **islas de React**
-montadas dentro de esas páginas. No hay un segundo servidor: Vite compila
-todo a `backend/app/static/islands/islands.js` y lo sirve el mismo backend.
+La interfaz es una SPA de React (Vite + TypeScript, `react-router`) y es la
+única: el backend no sirve páginas, solo la API bajo `/api`. En desarrollo
+corren dos procesos: el backend en `:8001` y Vite en `:5173`, que reenvía
+`/api` al backend (mismo origen para el navegador, así que la cookie de
+sesión funciona sin tokens ni CORS).
 
-Requisitos: Node 20+. Solo hace falta para las pantallas con islas; si no se
-compiló, esas pantallas muestran un aviso con el comando.
+Requisitos: Node 20+.
 
 ```bash
-cd frontend
-npm install
-npm run build     # o `npm run watch` mientras se edita: recompila al guardar
-npm test          # tests de los componentes (vitest)
+cd backend && .venv\Scripts\python -m uvicorn app.main:app --port 8001   # Windows
+cd frontend && npm install && npm run dev                                  # http://localhost:5173
 ```
 
-Para agregar una isla: crear el componente en `frontend/src/islands/`,
-registrarlo en `frontend/src/islands/index.ts` y usarlo desde un template con
-el macro de `backend/app/templates/_islands.html`:
-
-```jinja
-{% from "_islands.html" import island, islands_script %}
-{{ island("EditorOfertas", {"emergenciaId": e.id}) }}
-{% block scripts %}{{ islands_script() }}{% endblock %}
-```
-
-Los datos los pide a endpoints `/api/...` del mismo backend, con la misma
-cookie de sesión (sin tokens ni CORS), y `require_role` los protege igual que
-a las páginas.
+`npm run build` compila a `frontend/dist`; `npm run typecheck` chequea los tipos.
+Swagger de la API: `http://localhost:8001/docs`.
 
 ### Base de datos: SQLite (rápido) o Postgres (recomendado por la consigna)
 

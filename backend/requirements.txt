@@ -1,0 +1,10 @@
+# Versiones fijas: las mismas con las que pasan los tests. Para actualizar una,
+# cambiarla acá, correr `pytest` y comitear las dos cosas juntas.
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+pydantic-settings==2.15.0
+requests==2.34.2
+sqlalchemy==2.0.54
+psycopg[binary]==3.3.6
+alembic==1.20.0
+itsdangerous==2.2.0

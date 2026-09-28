@@ -79,6 +79,32 @@ class BonitaClient:
         resp.raise_for_status()
         return {v["name"]: v["value"] for v in resp.json()}
 
+    def resolve_case_id(self, returned_case_id, emergencia_id: int) -> int:
+        """Devuelve el caso que Bonita vinculo con la emergencia indicada.
+
+        Normalmente el ID de la instanciacion es suficiente. La busqueda de
+        respaldo evita asociar una emergencia local al caso equivocado si las
+        bases de Bonita y de la aplicacion quedaron desincronizadas.
+        """
+        returned_variables = self.get_case_variables(returned_case_id)
+        if returned_variables.get("emergenciaId") == str(emergencia_id):
+            return int(returned_case_id)
+
+        resp = self._request(
+            "GET", "/API/bpm/caseVariable",
+            params={"f": "name=emergenciaId", "p": 0, "c": 1000},
+        )
+        resp.raise_for_status()
+        for variable in resp.json():
+            if variable.get("value") == str(emergencia_id):
+                case_id = variable.get("case_id", variable.get("caseId"))
+                if case_id is not None:
+                    return int(case_id)
+
+        raise BonitaError(
+            f"No se encontro en Bonita un caso asociado a la emergencia {emergencia_id}"
+        )
+
     def get_human_tasks(self, case_id) -> list:
         resp = self._request(
             "GET", "/API/bpm/humanTask", params={"f": f"caseId={case_id}", "p": 0, "c": 100}

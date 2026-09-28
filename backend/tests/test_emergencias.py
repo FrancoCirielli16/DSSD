@@ -13,12 +13,17 @@ BASE = get_settings().bonita_base_url
 BASE_PATH = urlparse(BASE).path  # "/bonita"
 
 
-def _mock_alta_ok(case_id="4242", task_id="9001"):
+def _mock_alta_ok(case_id="4242", task_id="9001", returned_emergency_id="1", resolved_case_id=None):
     # login admin para resolver el proceso y municipio para instanciarlo
     responses.add(responses.POST, f"{BASE}/loginservice", status=204,
                   headers={"Set-Cookie": "X-Bonita-API-Token=tok-admin; Path=/"})
     responses.add(responses.GET, f"{BASE}/API/bpm/process", json=[{"id": "555"}])
     responses.add(responses.POST, f"{BASE}/API/bpm/process/555/instantiation", json={"caseId": case_id})
+    responses.add(responses.GET, f"{BASE}/API/bpm/caseVariable",
+                  json=[{"name": "emergenciaId", "value": returned_emergency_id}])
+    if resolved_case_id is not None:
+        responses.add(responses.GET, f"{BASE}/API/bpm/caseVariable",
+                      json=[{"name": "emergenciaId", "value": "2", "case_id": resolved_case_id}])
     responses.add(responses.GET, f"{BASE}/API/bpm/humanTask",
                   json=[{"id": task_id, "displayName": "Registrar Emergencia"}])
     # el municipio ya está logueado y completa su propia tarea
@@ -63,14 +68,15 @@ def test_alta_crea_emergencia_instancia_y_completa_registrar(login, seeded):
     paths = [urlparse(c.request.url).path[len(BASE_PATH):] for c in responses.calls]
     assert paths == [
         "/loginservice", "/API/bpm/process", "/loginservice",
-        "/API/bpm/process/555/instantiation", "/API/bpm/humanTask", "/API/system/session/unusedid",
+        "/API/bpm/process/555/instantiation", "/API/bpm/caseVariable", "/API/bpm/humanTask",
+        "/API/system/session/unusedid",
         "/API/bpm/userTask/9001", "/API/bpm/userTask/9001/execution",
     ]
     assert "username=operador.municipal" in responses.calls[2].request.body
 
 
 @responses.activate
-def test_caso_bonita_duplicado_no_deja_una_emergencia_a_medias(login, seeded):
+def test_caso_bonita_desincronizado_resuelve_el_caso_por_emergencia(login, seeded):
     with seeded() as s:
         s.add(Emergencia(
             municipio_id=s.query(Municipio).one().id,
@@ -82,13 +88,13 @@ def test_caso_bonita_duplicado_no_deja_una_emergencia_a_medias(login, seeded):
         ))
         s.commit()
 
-    _mock_alta_ok(case_id="2")
+    _mock_alta_ok(case_id="2", returned_emergency_id="1", resolved_case_id="3")
     r = login("operador.municipal").post("/emergencias/nueva", data=DATOS)
 
-    assert r.status_code == 502
-    assert "ya está asociado a otra emergencia" in r.text
+    assert r.status_code == 303
     with seeded() as s:
-        assert s.query(Emergencia).count() == 1
+        assert s.query(Emergencia).count() == 2
+        assert s.query(Emergencia).order_by(Emergencia.id.desc()).first().bonita_case_id == 3
 
 
 @responses.activate

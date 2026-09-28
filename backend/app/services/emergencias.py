@@ -93,6 +93,7 @@ def registrar_emergencia(
             "nivelGravedad": nivel_gravedad.value,
             "ventanaOfertasISO": _ventana_provisoria(settings),
         })
+        case_id = admin.resolve_case_id(case_id, emergencia.id)
         _completar_registrar_emergencia(admin, municipio, int(case_id))
     except (BonitaError, requests.RequestException) as exc:
         db.rollback()

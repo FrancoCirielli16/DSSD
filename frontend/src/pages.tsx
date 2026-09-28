@@ -10,7 +10,7 @@ const ROL_LABEL: Record<Rol, string> = {
   MUNICIPIO: "Operador Municipal",
   COORDINADOR: "Centro Coordinador",
   ONG: "Representante ONG",
-  AUDITOR: "Auditor / Directivo",
+  AUDITOR: "Entidad Nacional",
 };
 
 const GRAV_COLOR: Record<Emergencia["nivel_gravedad"], string> = {

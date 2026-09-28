@@ -50,15 +50,10 @@ class EmergenciaOut(BaseModel):
     municipio_nombre: str | None = None
     municipio_provincia: str | None = None
     lotes: list[LoteOut] = []
+    # Tarea que Bonita tiene pendiente para quien consulta; solo el detalle la completa.
+    tarea_bonita: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class LoteCreateIn(BaseModel):
-    recurso: str = Field(min_length=1, max_length=120)
-    cantidad: int = Field(gt=0)
-    unidad: str = Field(min_length=1, max_length=30)
-    tipo: TipoLote = TipoLote.PRINCIPAL
 
 
 class PublicarIn(BaseModel):

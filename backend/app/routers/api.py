@@ -7,13 +7,12 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.config import Settings, get_settings
 from app.core.deps import require_role
 from app.core.security import verify_password
-from app.core.templating import ROL_LABEL, TIPO_LABEL
+from app.core.labels import ROL_LABEL, TIPO_LABEL
 from app.db import get_db
 from app.models import Emergencia, Oferta, OfertaItem, Rol, Usuario
 from app.schemas.api import (
     EmergenciaOut,
     LoginIn,
-    LoteCreateIn,
     LoteOut,
     OfertaIn,
     OfertaItemOut,
@@ -29,6 +28,7 @@ from app.services.emergencias import (
     emergencia_visible,
     emergencias_visibles,
     registrar_emergencia,
+    tarea_ong_en_bonita,
 )
 from app.services.lotes import (
     LoteError,
@@ -141,20 +141,24 @@ def api_detalle(
     emergencia_id: int,
     user: Usuario = Depends(require_role()),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
-    return _emergencia_out(_require_visible(db, user, emergencia_id))
+    emergencia = _require_visible(db, user, emergencia_id)
+    out = _emergencia_out(emergencia)
+    out.tarea_bonita = tarea_ong_en_bonita(settings, emergencia, user)
+    return out
 
 
 @router.post("/emergencias/{emergencia_id}/lotes", response_model=LoteOut, status_code=201)
 def api_crear_lote(
     emergencia_id: int,
-    body: LoteCreateIn,
+    body: LoteIn,
     user: Usuario = Depends(require_role(Rol.COORDINADOR)),
     db: Session = Depends(get_db),
 ):
     emergencia = _require_visible(db, user, emergencia_id)
     try:
-        lote = agregar_lote(db, emergencia, LoteIn(**body.model_dump()))
+        lote = agregar_lote(db, emergencia, body)
     except LoteError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return lote
@@ -188,6 +192,7 @@ def api_publicar(
             db,
             settings,
             emergencia=emergencia,
+            coordinador=user,
             ventana_fin=PublicacionIn(ventana_fin=body.ventana_fin).ventana_fin,
         )
     except PublicacionError as exc:

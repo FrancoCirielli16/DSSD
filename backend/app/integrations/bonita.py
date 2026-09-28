@@ -11,15 +11,6 @@ import requests
 
 CONTRACT_INPUTS = ("emergenciaId", "municipioId", "nivelGravedad", "ventanaOfertasISO")
 
-# Usuario de prueba de la organización Bonita (entrega-2/ACME.xml) por rol de nuestra
-# app (app.models.Rol): quien nuestra app usa para completar tareas humanas de esa lane.
-BONITA_TEST_USERS = {
-    "MUNICIPIO": "operador.municipal",
-    "COORDINADOR": "coordinador.regional",
-    "ONG": "ong.cruzroja",
-}
-
-
 class BonitaError(RuntimeError):
     pass
 
@@ -86,6 +77,33 @@ class BonitaClient:
         )
         resp.raise_for_status()
         return resp.json()
+
+    def get_case(self, case_id) -> dict:
+        resp = self._request("GET", f"/API/bpm/case/{case_id}")
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_archived_human_tasks(self, case_id) -> list:
+        """Tareas ya completadas del caso. Traen 'executedBy': con quién las ejecutó el motor."""
+        resp = self._request(
+            "GET", "/API/bpm/archivedHumanTask", params={"f": f"caseId={case_id}", "p": 0, "c": 100}
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    def actor_names(self, process_definition_id) -> dict:
+        """{id de actor: nombre} del proceso: sirve para saber a qué actor pertenece cada tarea."""
+        resp = self._request(
+            "GET", "/API/bpm/actor", params={"f": f"process_id={process_definition_id}", "p": 0, "c": 50}
+        )
+        resp.raise_for_status()
+        return {a["id"]: a["name"] for a in resp.json()}
+
+    def user_name(self, user_id) -> str:
+        """Username a partir del id numérico que devuelven 'started_by' y 'executedBy'."""
+        resp = self._request("GET", f"/API/identity/user/{user_id}")
+        resp.raise_for_status()
+        return resp.json()["userName"]
 
     def current_user_id(self) -> str:
         resp = self._request("GET", "/API/system/session/unusedid")

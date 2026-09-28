@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.integrations.bonita import BONITA_TEST_USERS, BonitaClient, BonitaError
+from app.integrations.bonita import BonitaClient, BonitaError
 from app.models import Emergencia, EstadoEmergencia, Gravedad, Rol, Usuario
 
 
@@ -49,13 +49,12 @@ def _ventana_provisoria(settings: Settings) -> str:
     return vencimiento.isoformat(timespec="seconds")
 
 
-def _completar_registrar_emergencia(settings: Settings, admin: BonitaClient, case_id) -> None:
+def _completar_registrar_emergencia(
+    admin: BonitaClient, municipio: BonitaClient, case_id: int
+) -> None:
     tarea = admin.wait_for_task(case_id, "Registrar Emergencia")
     if tarea is None:
         raise BonitaError("El caso se instanció pero no apareció la tarea 'Registrar Emergencia'")
-
-    municipio = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
-    municipio.login(BONITA_TEST_USERS["MUNICIPIO"], settings.bonita_test_password)
     municipio.complete_task_as_self(tarea["id"])
 
 
@@ -86,13 +85,15 @@ def registrar_emergencia(
         admin = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
         admin.login(settings.bonita_username, settings.bonita_password)
         process_id = admin.resolve_process_id(settings.bonita_process_name, settings.bonita_process_version)
-        case_id = admin.start_case(process_id, {
+        municipio = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
+        municipio.login(operador.username, settings.bonita_user_password)
+        case_id = municipio.start_case(process_id, {
             "emergenciaId": emergencia.id,
             "municipioId": operador.municipio_id,
             "nivelGravedad": nivel_gravedad.value,
             "ventanaOfertasISO": _ventana_provisoria(settings),
         })
-        _completar_registrar_emergencia(settings, admin, case_id)
+        _completar_registrar_emergencia(admin, municipio, int(case_id))
     except (BonitaError, requests.RequestException) as exc:
         db.rollback()
         raise AltaEmergenciaError(

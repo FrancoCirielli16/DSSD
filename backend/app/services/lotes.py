@@ -1,10 +1,4 @@
-"""T-10: lotes de necesidades y publicación de la convocatoria (Centro Coordinador).
-
-La pantalla del Coordinador reemplaza a dos tareas de Bonita seguidas
-("Revisar Informacion y Generar Lotes…" y "Publicar Convocatoria…"), así que al publicar
-la app completa las dos en nombre del Coordinador. Mientras tanto los lotes viven solo en
-la base local y el caso espera en la primera tarea.
-"""
+"""T-10: lotes de necesidades y publicación de la convocatoria (Centro Coordinador)."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -13,8 +7,8 @@ import requests
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.integrations.bonita import BONITA_TEST_USERS, BonitaClient, BonitaError
-from app.models import Emergencia, EstadoEmergencia, Lote
+from app.integrations.bonita import BonitaClient, BonitaError
+from app.models import Emergencia, EstadoEmergencia, Lote, Usuario
 from app.schemas.lotes import LoteIn
 
 TAREA_REVISAR = "Revisar Informacion"
@@ -23,6 +17,10 @@ TAREA_PUBLICAR = "Publicar Convocatoria"
 
 class LoteError(RuntimeError):
     """Operación inválida sobre los lotes (estado equivocado, lote inexistente…)."""
+
+
+class RevisionError(RuntimeError):
+    """La revisión no pudo completarse en Bonita."""
 
 
 class PublicacionError(RuntimeError):
@@ -34,12 +32,22 @@ def _editable(emergencia: Emergencia) -> None:
         raise LoteError("La convocatoria ya está publicada: los lotes no se pueden modificar.")
 
 
-def agregar_lote(db: Session, emergencia: Emergencia, datos: LoteIn) -> Lote:
+def agregar_lote(
+    db: Session, settings: Settings, emergencia: Emergencia, datos: LoteIn, *, actor: Usuario
+) -> Lote:
     _editable(emergencia)
+    if emergencia.bonita_case_id is None:
+        raise LoteError("La emergencia no tiene caso en Bonita.")
     lote = Lote(emergencia_id=emergencia.id, **datos.model_dump())
     db.add(lote)
-    db.commit()
-    db.refresh(lote)
+    try:
+        db.flush()
+        finalizar_revision_en_bonita(settings, emergencia.bonita_case_id, actor)
+        db.commit()
+        db.refresh(lote)
+    except (BonitaError, requests.RequestException) as exc:
+        db.rollback()
+        raise RevisionError("No se pudo completar la revisión en Bonita; probá de nuevo.") from exc
     return lote
 
 
@@ -53,7 +61,7 @@ def borrar_lote(db: Session, emergencia: Emergencia, lote_id: int) -> None:
 
 
 def publicar_convocatoria(
-    db: Session, settings: Settings, *, emergencia: Emergencia, ventana_fin: datetime
+    db: Session, settings: Settings, *, emergencia: Emergencia, ventana_fin: datetime, actor: Usuario
 ) -> Emergencia:
     if emergencia.estado is not EstadoEmergencia.REGISTRADA:
         raise PublicacionError("Esta convocatoria ya fue publicada.")
@@ -67,7 +75,7 @@ def publicar_convocatoria(
         raise PublicacionError("El cierre de la ventana tiene que ser una fecha futura.")
 
     try:
-        publicar_en_bonita(settings, emergencia.bonita_case_id, ventana_fin)
+        publicar_en_bonita(settings, emergencia.bonita_case_id, ventana_fin, actor)
     except (BonitaError, requests.RequestException) as exc:
         db.rollback()
         raise PublicacionError(
@@ -82,12 +90,26 @@ def publicar_convocatoria(
     return emergencia
 
 
-def publicar_en_bonita(settings: Settings, case_id: int, ventana_fin: datetime) -> None:
+def finalizar_revision_en_bonita(settings: Settings, case_id: int, actor: Usuario) -> None:
+    admin = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
+    admin.login(settings.bonita_username, settings.bonita_password)
+    revisar = admin.find_task(case_id, TAREA_REVISAR)
+    if revisar is None:
+        if admin.find_task(case_id, TAREA_PUBLICAR) is not None:
+            return
+        raise BonitaError(f"El caso {case_id} no está en '{TAREA_REVISAR}…'.")
+
+    coordinador = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
+    coordinador.login(actor.username, settings.bonita_user_password)
+    coordinador.complete_task_as_self(revisar["id"])
+
+
+def publicar_en_bonita(settings: Settings, case_id: int, ventana_fin: datetime, actor: Usuario) -> None:
     """Completa "Revisar…" (si sigue pendiente), setea la ventana y completa "Publicar…"."""
     admin = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
     admin.login(settings.bonita_username, settings.bonita_password)
     coordinador = BonitaClient(settings.bonita_base_url, settings.bonita_timeout_seconds)
-    coordinador.login(BONITA_TEST_USERS["COORDINADOR"], settings.bonita_test_password)
+    coordinador.login(actor.username, settings.bonita_user_password)
 
     # Si un intento anterior se cortó después de completar "Revisar…", el caso ya está en
     # "Publicar…": se sigue desde ahí en vez de fallar.

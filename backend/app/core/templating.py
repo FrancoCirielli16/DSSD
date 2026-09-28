@@ -10,7 +10,7 @@ ROL_LABEL = {
     "MUNICIPIO": "Operador Municipal",
     "COORDINADOR": "Centro Coordinador Regional",
     "ONG": "Representante de ONG",
-    "AUDITOR": "Auditor / Directivo",
+    "AUDITOR": "Entidad Nacional",
 }
 
 

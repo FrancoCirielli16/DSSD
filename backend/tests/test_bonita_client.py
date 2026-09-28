@@ -133,6 +133,33 @@ def test_find_task_devuelve_none_si_no_esta(client):
 
 
 @responses.activate
+def test_metodos_de_identidad_usan_endpoints_de_usuario_y_membresia(client):
+    import json
+
+    responses.add(responses.GET, f"{BASE}/API/identity/user", json=[{"id": "12", "userName": "ana"}])
+    responses.add(responses.GET, f"{BASE}/API/identity/membership", json=[{"id": "7"}])
+    responses.add(responses.POST, f"{BASE}/API/identity/user", json={"id": "13"})
+    responses.add(responses.POST, f"{BASE}/API/identity/membership", status=200)
+    responses.add(responses.DELETE, f"{BASE}/API/identity/membership/7", status=200)
+    responses.add(responses.GET, f"{BASE}/API/portal/profile", json=[{"id": "4", "name": "User"}])
+    responses.add(responses.GET, f"{BASE}/API/portal/profileMember", json=[])
+    responses.add(responses.POST, f"{BASE}/API/portal/profileMember", status=200)
+
+    assert client.find_identity("user", "userName", "ana")["id"] == "12"
+    assert client.list_identity("membership", "user_id", "12")[0]["id"] == "7"
+    assert client.create_identity("user", {"userName": "bea"})["id"] == "13"
+    client.add_membership("12", "2", "3")
+    client.delete_membership("7")
+    assert client.find_profile("User")["id"] == "4"
+    assert client.find_profile_member("4", "12") is None
+    assert "member_type%3Duser" in responses.calls[6].request.url
+    client.add_profile_member("4", "12")
+
+    assert json.loads(responses.calls[3].request.body) == {"user_id": "12", "group_id": "2", "role_id": "3"}
+    assert json.loads(responses.calls[7].request.body) == {"profile_id": "4", "user_id": "12"}
+
+
+@responses.activate
 def test_complete_task_as_self_asigna_y_ejecuta(client):
     import json
 

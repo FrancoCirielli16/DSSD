@@ -115,6 +115,18 @@ Para sumar una pantalla al menú de un perfil, poner su ruta en `MENU_POR_ROL`
 listar tareas, setear variables). Está probado contra Studio 10.4.0.
 Configuración en `.env` (`BONITA_*`).
 
-Reglas: la app nunca completa la tarea `Cargar Ofertas de Ayuda`; guarda el
-`caseId` de cada emergencia; avanza tareas logueándose como un usuario del
-rol correspondiente.
+Al arrancar, el backend sincroniza los usuarios existentes de RescueSync con
+Bonita: crea los que falten, asigna grupo/rol y perfil `User`. `AUDITOR` se
+sincroniza como `Entidad Nacional`. Las cuentas sincronizadas usan
+`BONITA_USER_PASSWORD` (por defecto `bpm`, solo para desarrollo). Los casos y
+las tareas humanas se inician/completan con el usuario autenticado del rol
+correspondiente; Walter Bates queda como usuario técnico para administrar el
+proceso y sus variables. La sincronización puede desactivarse con
+`BONITA_SYNC_ON_STARTUP=false`.
+
+La lane de Entidad Nacional del proceso actual contiene tareas automáticas;
+crear su grupo/rol no la convierte en una tarea humana. Para asignarle trabajo
+a esos usuarios hay que cambiar el BPMN en Studio y desplegar una nueva versión.
+
+La app nunca completa la tarea `Cargar Ofertas de Ayuda` y guarda el `caseId`
+de cada emergencia.

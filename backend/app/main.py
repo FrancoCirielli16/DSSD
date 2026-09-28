@@ -1,3 +1,7 @@
+import logging
+from contextlib import asynccontextmanager
+
+import requests
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import RedirectResponse
@@ -8,10 +12,23 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.core.config import get_settings
 from app.core.templating import BASE_DIR, templates
 from app.routers import api, auth, emergencias, lotes, pages
+from app.integrations.bonita import BonitaError
+from app.services.bonita_users import sincronizar_usuarios_existentes
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
-app = FastAPI(title=settings.app_name)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if settings.bonita_sync_on_startup:
+        try:
+            sincronizar_usuarios_existentes(settings)
+        except (BonitaError, requests.RequestException):
+            logger.exception("No se pudieron sincronizar los usuarios de RescueSync con Bonita")
+    yield
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 app.add_middleware(
     SessionMiddleware, secret_key=settings.session_secret, same_site="lax", max_age=8 * 3600
 )

@@ -7,21 +7,21 @@ from urllib.parse import urlparse
 import responses
 
 from app.core.config import get_settings
-from app.models import Emergencia
+from app.models import Emergencia, Municipio
 
 BASE = get_settings().bonita_base_url
 BASE_PATH = urlparse(BASE).path  # "/bonita"
 
 
 def _mock_alta_ok(case_id="4242", task_id="9001"):
-    # login admin (walter.bates) para instanciar
+    # login admin para resolver el proceso y municipio para instanciarlo
     responses.add(responses.POST, f"{BASE}/loginservice", status=204,
                   headers={"Set-Cookie": "X-Bonita-API-Token=tok-admin; Path=/"})
     responses.add(responses.GET, f"{BASE}/API/bpm/process", json=[{"id": "555"}])
     responses.add(responses.POST, f"{BASE}/API/bpm/process/555/instantiation", json={"caseId": case_id})
     responses.add(responses.GET, f"{BASE}/API/bpm/humanTask",
                   json=[{"id": task_id, "displayName": "Registrar Emergencia"}])
-    # login como operador.municipal para completar la tarea
+    # el municipio ya está logueado y completa su propia tarea
     responses.add(responses.POST, f"{BASE}/loginservice", status=204,
                   headers={"Set-Cookie": "X-Bonita-API-Token=tok-muni; Path=/"})
     responses.add(responses.GET, f"{BASE}/API/system/session/unusedid", json={"user_id": "77"})
@@ -59,13 +59,36 @@ def test_alta_crea_emergencia_instancia_y_completa_registrar(login, seeded):
         assert e.municipio_id is not None
         assert e.estado.value == "REGISTRADA"
 
-    # las 8 llamadas HTTP se hicieron en el orden esperado (dos logins intercalados)
+    # las llamadas muestran que el municipio inicia el caso y completa su tarea
     paths = [urlparse(c.request.url).path[len(BASE_PATH):] for c in responses.calls]
     assert paths == [
-        "/loginservice", "/API/bpm/process", "/API/bpm/process/555/instantiation",
-        "/API/bpm/humanTask", "/loginservice", "/API/system/session/unusedid",
+        "/loginservice", "/API/bpm/process", "/loginservice",
+        "/API/bpm/process/555/instantiation", "/API/bpm/humanTask", "/API/system/session/unusedid",
         "/API/bpm/userTask/9001", "/API/bpm/userTask/9001/execution",
     ]
+    assert "username=operador.municipal" in responses.calls[2].request.body
+
+
+@responses.activate
+def test_caso_bonita_duplicado_no_deja_una_emergencia_a_medias(login, seeded):
+    with seeded() as s:
+        s.add(Emergencia(
+            municipio_id=s.query(Municipio).one().id,
+            tipo="incendio",
+            nivel_gravedad="BAJO",
+            zona_afectada="Norte",
+            descripcion="Registro previo",
+            bonita_case_id=2,
+        ))
+        s.commit()
+
+    _mock_alta_ok(case_id="2")
+    r = login("operador.municipal").post("/emergencias/nueva", data=DATOS)
+
+    assert r.status_code == 502
+    assert "ya está asociado a otra emergencia" in r.text
+    with seeded() as s:
+        assert s.query(Emergencia).count() == 1
 
 
 @responses.activate

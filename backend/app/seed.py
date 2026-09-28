@@ -21,7 +21,7 @@ DEMO_USERS = [
     ("coordinador.regional", "Centro Coordinador Regional", Rol.COORDINADOR, None),
     ("ong.cruzroja", "Representante Cruz Roja", Rol.ONG, "Cruz Roja Argentina"),
     ("ong.bomberos", "Representante Bomberos Voluntarios", Rol.ONG, "Bomberos Voluntarios"),
-    ("auditor", "Auditor / Directivo", Rol.AUDITOR, None),
+    ("auditor", "Entidad Nacional", Rol.AUDITOR, None),
 ]
 
 

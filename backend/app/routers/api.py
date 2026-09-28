@@ -33,6 +33,7 @@ from app.services.emergencias import (
 from app.services.lotes import (
     LoteError,
     PublicacionError,
+    RevisionError,
     agregar_lote,
     borrar_lote,
     publicar_convocatoria,
@@ -151,12 +152,15 @@ def api_crear_lote(
     body: LoteCreateIn,
     user: Usuario = Depends(require_role(Rol.COORDINADOR)),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     emergencia = _require_visible(db, user, emergencia_id)
     try:
-        lote = agregar_lote(db, emergencia, LoteIn(**body.model_dump()))
+        lote = agregar_lote(db, settings, emergencia, LoteIn(**body.model_dump()), actor=user)
     except LoteError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RevisionError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     return lote
 
 
@@ -189,6 +193,7 @@ def api_publicar(
             settings,
             emergencia=emergencia,
             ventana_fin=PublicacionIn(ventana_fin=body.ventana_fin).ventana_fin,
+            actor=user,
         )
     except PublicacionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

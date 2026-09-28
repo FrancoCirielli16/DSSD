@@ -11,12 +11,11 @@ import requests
 
 CONTRACT_INPUTS = ("emergenciaId", "municipioId", "nivelGravedad", "ventanaOfertasISO")
 
-# Usuario de prueba de la organización Bonita (entrega-2/ACME.xml) por rol de nuestra
-# app (app.models.Rol): quien nuestra app usa para completar tareas humanas de esa lane.
-BONITA_TEST_USERS = {
-    "MUNICIPIO": "operador.municipal",
-    "COORDINADOR": "coordinador.regional",
-    "ONG": "ong.cruzroja",
+BONITA_ROLE_MAP = {
+    "MUNICIPIO": ("municipio", "operador_municipal", "Operador Municipal"),
+    "COORDINADOR": ("coordinador", "centro_coordinador_regional", "Centro Coordinador Regional"),
+    "ONG": ("ong", "organizacion_no_gubernamental", "Organización No Gubernamental"),
+    "AUDITOR": ("entidad_nacional", "entidad_nacional", "Entidad Nacional"),
 }
 
 
@@ -86,6 +85,61 @@ class BonitaClient:
         )
         resp.raise_for_status()
         return resp.json()
+
+    def find_identity(self, resource: str, field: str, value: str) -> dict | None:
+        resp = self._request(
+            "GET", f"/API/identity/{resource}", params={"f": f"{field}={value}", "p": 0, "c": 100}
+        )
+        resp.raise_for_status()
+        return next(iter(resp.json()), None)
+
+    def list_identity(self, resource: str, field: str, value: str) -> list[dict]:
+        resp = self._request(
+            "GET", f"/API/identity/{resource}", params={"f": f"{field}={value}", "p": 0, "c": 100}
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    def find_profile(self, name: str) -> dict | None:
+        resp = self._request(
+            "GET", "/API/portal/profile", params={"f": f"name={name}", "p": 0, "c": 100}
+        )
+        resp.raise_for_status()
+        return next(iter(resp.json()), None)
+
+    def find_profile_member(self, profile_id: str, user_id: str) -> dict | None:
+        resp = self._request(
+            "GET", "/API/portal/profileMember",
+            params={
+                "f": ["member_type=user", f"profile_id={profile_id}", f"user_id={user_id}"],
+                "p": 0,
+                "c": 100,
+            },
+        )
+        resp.raise_for_status()
+        return next(iter(resp.json()), None)
+
+    def create_identity(self, resource: str, data: dict) -> dict:
+        resp = self._request("POST", f"/API/identity/{resource}", json=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    def add_membership(self, user_id: str, group_id: str, role_id: str) -> None:
+        resp = self._request(
+            "POST", "/API/identity/membership",
+            json={"user_id": user_id, "group_id": group_id, "role_id": role_id},
+        )
+        resp.raise_for_status()
+
+    def delete_membership(self, membership_id: str) -> None:
+        resp = self._request("DELETE", f"/API/identity/membership/{membership_id}")
+        resp.raise_for_status()
+
+    def add_profile_member(self, profile_id: str, user_id: str) -> None:
+        resp = self._request(
+            "POST", "/API/portal/profileMember", json={"profile_id": profile_id, "user_id": user_id}
+        )
+        resp.raise_for_status()
 
     def current_user_id(self) -> str:
         resp = self._request("GET", "/API/system/session/unusedid")

@@ -15,6 +15,7 @@ from app.services.emergencias import emergencia_visible
 from app.services.lotes import (
     LoteError,
     PublicacionError,
+    RevisionError,
     agregar_lote,
     borrar_lote,
     publicar_convocatoria,
@@ -47,6 +48,7 @@ def crear_lote(
     tipo: str = Form("PRINCIPAL"),
     user: Usuario = Depends(require_role(Rol.COORDINADOR)),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     emergencia = _emergencia(db, user, emergencia_id)
     try:
@@ -54,8 +56,10 @@ def crear_lote(
     except ValidationError as exc:
         return _volver(emergencia_id, mensaje_de_error(exc, ETIQUETAS))
     try:
-        agregar_lote(db, emergencia, datos)
+        agregar_lote(db, settings, emergencia, datos, actor=user)
     except LoteError as exc:
+        return _volver(emergencia_id, str(exc))
+    except RevisionError as exc:
         return _volver(emergencia_id, str(exc))
     return _volver(emergencia_id)
 
@@ -89,7 +93,9 @@ def publicar(
     except ValidationError as exc:
         return _volver(emergencia_id, mensaje_de_error(exc, ETIQUETAS))
     try:
-        publicar_convocatoria(db, settings, emergencia=emergencia, ventana_fin=datos.ventana_fin)
+        publicar_convocatoria(
+            db, settings, emergencia=emergencia, ventana_fin=datos.ventana_fin, actor=user
+        )
     except PublicacionError as exc:
         return _volver(emergencia_id, str(exc))
     return _volver(emergencia_id)

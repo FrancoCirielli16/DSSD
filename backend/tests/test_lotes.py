@@ -54,6 +54,18 @@ def _mock_publicacion(revisar_pendiente=True):
     responses.add(responses.POST, f"{BASE}/API/bpm/userTask/2/execution", status=200)
 
 
+def _mock_revision():
+    responses.add(responses.POST, f"{BASE}/loginservice", status=204,
+                  headers={"Set-Cookie": "X-Bonita-API-Token=tok-admin; Path=/"})
+    responses.add(responses.GET, f"{BASE}/API/bpm/humanTask",
+                  json=[{"id": "1", "displayName": "Revisar Informacion y Generar Lotes de Necesidades"}])
+    responses.add(responses.POST, f"{BASE}/loginservice", status=204,
+                  headers={"Set-Cookie": "X-Bonita-API-Token=tok-coord; Path=/"})
+    responses.add(responses.GET, f"{BASE}/API/system/session/unusedid", json={"user_id": "77"})
+    responses.add(responses.PUT, f"{BASE}/API/bpm/userTask/1", status=200)
+    responses.add(responses.POST, f"{BASE}/API/bpm/userTask/1/execution", status=200)
+
+
 def _paths():
     return [urlparse(c.request.url).path[len(BASE_PATH):] for c in responses.calls]
 
@@ -66,7 +78,9 @@ def test_solo_el_coordinador_gestiona_lotes(login, emergencia):
         assert r.status_code == 403, usuario
 
 
-def test_agregar_lote_y_verlo_en_el_detalle(login, emergencia, seeded):
+@responses.activate
+def test_agregar_lote_completa_revision_y_se_ve_en_el_detalle(login, emergencia, seeded):
+    _mock_revision()
     c = login("coordinador.regional")
     r = c.post(f"/emergencias/{emergencia}/lotes", data=LOTE)
     assert r.status_code == 303 and r.headers["location"] == f"/emergencias/{emergencia}"
@@ -74,9 +88,30 @@ def test_agregar_lote_y_verlo_en_el_detalle(login, emergencia, seeded):
         lote = s.query(Lote).one()
         assert (lote.recurso, lote.cantidad, lote.unidad, lote.tipo) == ("Paramédicos", 5, "personas", TipoLote.PRINCIPAL)
     assert "Paramédicos · 5 personas" in c.get(f"/emergencias/{emergencia}").text
+    assert "/API/bpm/userTask/1/execution" in _paths()
+    assert "username=coordinador.regional" in responses.calls[2].request.body
 
 
+@responses.activate
+def test_api_agrega_varios_lotes_y_completa_revision_una_vez(login, emergencia):
+    _mock_revision()
+    responses.add(responses.POST, f"{BASE}/loginservice", status=204,
+                  headers={"Set-Cookie": "X-Bonita-API-Token=tok-admin-2; Path=/"})
+    responses.add(responses.GET, f"{BASE}/API/bpm/humanTask",
+                  json=[{"id": "2", "displayName": "Publicar Convocatoria y Notificar a la Red de ONGs"}])
+    c = login("coordinador.regional")
+    url = f"/api/emergencias/{emergencia}/lotes"
+
+    primero = c.post(url, json=LOTE)
+    segundo = c.post(url, json={**LOTE, "recurso": "Agua"})
+
+    assert primero.status_code == segundo.status_code == 201
+    assert _paths().count("/API/bpm/userTask/1/execution") == 1
+
+
+@responses.activate
 def test_lote_de_apoyo(login, emergencia, seeded):
+    _mock_revision()
     login("coordinador.regional").post(f"/emergencias/{emergencia}/lotes", data={**LOTE, "tipo": "APOYO"})
     with seeded() as s:
         assert s.query(Lote).one().tipo is TipoLote.APOYO
@@ -148,6 +183,7 @@ def test_publicar_completa_las_dos_tareas_y_setea_la_ventana(login, emergencia, 
         "/API/bpm/humanTask", f"/API/bpm/caseVariable/{CASE}/ventanaOfertasISO",
         "/API/system/session/unusedid", "/API/bpm/userTask/2", "/API/bpm/userTask/2/execution",
     ]
+    assert "username=coordinador.regional" in responses.calls[1].request.body
     enviado = json.loads(next(c.request.body for c in responses.calls if "caseVariable" in c.request.url))
     assert enviado["type"] == "java.lang.String" and enviado["value"].startswith(ventana)
 

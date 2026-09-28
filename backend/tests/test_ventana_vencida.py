@@ -1,0 +1,51 @@
+"""Al vencer la ventana de ofertas, la emergencia pasa a CERRADA y ya no acepta ofertas."""
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+from app.models import Emergencia, EstadoEmergencia, Gravedad, Lote, Municipio, TipoLote
+
+
+def _convocatoria(seeded, fin):
+    with seeded() as s:
+        e = Emergencia(municipio_id=s.query(Municipio).one().id, tipo="terremoto", nivel_gravedad=Gravedad.ALTO,
+                       zona_afectada="Centro", descripcion="x", bonita_case_id=1,
+                       estado=EstadoEmergencia.CONVOCATORIA, ventana_ofertas_fin=fin)
+        e.lotes = [Lote(recurso="Agua", cantidad=100, unidad="l", tipo=TipoLote.PRINCIPAL)]
+        s.add(e)
+        s.commit()
+        return e.id, e.lotes[0].id
+
+
+@pytest.fixture
+def vencida(seeded):
+    return _convocatoria(seeded, datetime.now(timezone.utc) - timedelta(minutes=5))
+
+
+@pytest.fixture
+def vigente(seeded):
+    return _convocatoria(seeded, datetime.now(timezone.utc) + timedelta(hours=2))
+
+
+def test_ventana_vencida_pasa_a_cerrada(login, vencida):
+    r = login("coordinador.regional").get(f"/api/emergencias/{vencida[0]}")
+    assert r.status_code == 200 and r.json()["estado"] == "CERRADA"
+
+
+def test_ventana_vigente_sigue_abierta(login, vigente):
+    r = login("coordinador.regional").get(f"/api/emergencias/{vigente[0]}")
+    assert r.json()["estado"] == "CONVOCATORIA"
+
+
+def test_listado_tambien_la_cierra(login, vencida):
+    estados = {e["id"]: e["estado"] for e in login("coordinador.regional").get("/api/emergencias").json()}
+    assert estados[vencida[0]] == "CERRADA"
+
+
+def test_la_ong_sigue_viendo_la_cerrada_pero_no_puede_ofertar(login, vencida):
+    emergencia_id, lote_id = vencida
+    ong = login("ong.cruzroja")
+    assert ong.get(f"/api/emergencias/{emergencia_id}").json()["estado"] == "CERRADA"
+    r = ong.post(f"/api/emergencias/{emergencia_id}/ofertas",
+                 json={"items": [{"lote_id": lote_id, "recurso": "Agua", "cantidad": 10}]})
+    assert r.status_code == 400 and "cerró" in r.json()["detail"]

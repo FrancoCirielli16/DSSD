@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<organization:Organization xmlns:organization="http://documentation.bonitasoft.com/organization-xml-schema/1.1">
+  <users>
+    <user userName="walter.bates">
+      <firstName>Walter</firstName>
+      <lastName>Bates</lastName>
+      <title>Mr</title>
+      <jobTitle>Usuario tecnico: instancia casos y lee el estado del motor desde el backend</jobTitle>
+      <enabled>true</enabled>
+      <password encrypted="false">bpm</password>
+    </user>
+    <user userName="operador.municipal">
+      <firstName>Operador</firstName>
+      <lastName>Municipal</lastName>
+      <jobTitle>Operador Municipal de Bahia Blanca</jobTitle>
+      <enabled>true</enabled>
+      <password encrypted="false">bpm</password>
+    </user>
+    <user userName="operador.municipal2">
+      <firstName>Segundo Operador</firstName>
+      <lastName>Municipal</lastName>
+      <jobTitle>Operador Municipal de Bahia Blanca (segundo turno)</jobTitle>
+      <enabled>true</enabled>
+      <password encrypted="false">bpm</password>
+    </user>
+    <user userName="coordinador.regional">
+      <firstName>Centro Coordinador</firstName>
+      <lastName>Regional</lastName>
+      <jobTitle>Centro Coordinador Regional</jobTitle>
+      <enabled>true</enabled>
+      <password encrypted="false">bpm</password>
+    </user>
+    <user userName="ong.cruzroja">
+      <firstName>Representante</firstName>
+      <lastName>Cruz Roja</lastName>
+      <jobTitle>Representante de Cruz Roja Argentina</jobTitle>
+      <enabled>true</enabled>
+      <password encrypted="false">bpm</password>
+    </user>
+    <user userName="ong.bomberos">
+      <firstName>Representante</firstName>
+      <lastName>Bomberos Voluntarios</lastName>
+      <jobTitle>Representante de Bomberos Voluntarios</jobTitle>
+      <enabled>true</enabled>
+      <password encrypted="false">bpm</password>
+    </user>
+    <user userName="auditor">
+      <firstName>Auditor</firstName>
+      <lastName>Directivo</lastName>
+      <jobTitle>Auditor / Directivo</jobTitle>
+      <enabled>true</enabled>
+      <password encrypted="false">bpm</password>
+    </user>
+  </users>
+  <roles>
+    <role name="member">
+      <displayName>Member</displayName>
+      <description>Rol por defecto de Bonita. Lo conserva el usuario tecnico walter.bates.</description>
+    </role>
+    <role name="operador_municipal">
+      <displayName>Operador Municipal</displayName>
+      <description>Perfil 1 del enunciado. Registra la emergencia y adjudica las ofertas.</description>
+    </role>
+    <role name="coordinador_regional">
+      <displayName>Coordinador Regional</displayName>
+      <description>Perfil 2 del enunciado. Genera los lotes, publica la convocatoria y monitorea.</description>
+    </role>
+    <role name="representante_ong">
+      <displayName>Representante de ONG</displayName>
+      <description>Perfil 3 del enunciado. Carga ofertas y marca sus actividades como finalizadas.</description>
+    </role>
+    <role name="auditor">
+      <displayName>Auditor / Directivo</displayName>
+      <description>Perfil 4 del enunciado. Solo consulta: no tiene tareas en el proceso.</description>
+    </role>
+  </roles>
+  <groups>
+    <group name="acme">
+      <displayName>Acme</displayName>
+      <description>Grupo por defecto de Bonita. Lo conserva el usuario tecnico walter.bates.</description>
+    </group>
+    <group name="hr" parentPath="/acme">
+      <displayName>Human Resources</displayName>
+      <description>Grupo por defecto de Bonita. Lo conserva el usuario tecnico walter.bates.</description>
+    </group>
+    <group name="rescuesync">
+      <displayName>RescueSync</displayName>
+      <description>Grupo raiz de la red RescueSync</description>
+    </group>
+    <group name="municipio" parentPath="/rescuesync">
+      <displayName>Municipio (Operador Municipal)</displayName>
+      <description>Actor de la lane Municipio</description>
+    </group>
+    <group name="coordinador" parentPath="/rescuesync">
+      <displayName>Centro Coordinador Regional</displayName>
+      <description>Actor de la lane Centro Coordinador Regional</description>
+    </group>
+    <group name="ong" parentPath="/rescuesync">
+      <displayName>ONG / Organismo de Rescate</displayName>
+      <description>Actor de la lane ONG</description>
+    </group>
+    <group name="auditoria" parentPath="/rescuesync">
+      <displayName>Auditoria / Direccion</displayName>
+      <description>Sin actor en el proceso: el Auditor consulta, no ejecuta tareas.</description>
+    </group>
+  </groups>
+  <memberships>
+    <membership>
+      <userName>walter.bates</userName>
+      <roleName>member</roleName>
+      <groupName>hr</groupName>
+      <groupParentPath>/acme</groupParentPath>
+    </membership>
+    <membership>
+      <userName>operador.municipal</userName>
+      <roleName>operador_municipal</roleName>
+      <groupName>municipio</groupName>
+      <groupParentPath>/rescuesync</groupParentPath>
+    </membership>
+    <membership>
+      <userName>operador.municipal2</userName>
+      <roleName>operador_municipal</roleName>
+      <groupName>municipio</groupName>
+      <groupParentPath>/rescuesync</groupParentPath>
+    </membership>
+    <membership>
+      <userName>coordinador.regional</userName>
+      <roleName>coordinador_regional</roleName>
+      <groupName>coordinador</groupName>
+      <groupParentPath>/rescuesync</groupParentPath>
+    </membership>
+    <membership>
+      <userName>ong.cruzroja</userName>
+      <roleName>representante_ong</roleName>
+      <groupName>ong</groupName>
+      <groupParentPath>/rescuesync</groupParentPath>
+    </membership>
+    <membership>
+      <userName>ong.bomberos</userName>
+      <roleName>representante_ong</roleName>
+      <groupName>ong</groupName>
+      <groupParentPath>/rescuesync</groupParentPath>
+    </membership>
+    <membership>
+      <userName>auditor</userName>
+      <roleName>auditor</roleName>
+      <groupName>auditoria</groupName>
+      <groupParentPath>/rescuesync</groupParentPath>
+    </membership>
+  </memberships>
+</organization:Organization>

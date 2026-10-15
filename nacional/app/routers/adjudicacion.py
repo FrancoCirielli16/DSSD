@@ -34,7 +34,23 @@ def _salida(adjudicacion: Adjudicacion) -> AdjudicacionOut:
     )
 
 
-@router.post("", response_model=AdjudicacionOut, status_code=201)
+@router.post(
+    "",
+    response_model=AdjudicacionOut,
+    status_code=201,
+    summary="Adjudicar recursos de forma transaccional",
+    description=(
+        "Compromete inventario con locks pesimistas y orden determinista. "
+        "Una referencia repetida devuelve la adjudicación existente sin volver a comprometer stock."
+    ),
+    responses={
+        200: {"description": "Adjudicación idempotente ya existente"},
+        201: {"description": "Adjudicación creada y recursos comprometidos"},
+        400: {"description": "Petición o inventario inválido"},
+        409: {"description": "Conflicto de concurrencia o stock insuficiente"},
+        422: {"description": "Datos de entrada inválidos"},
+    },
+)
 def adjudicar(
     body: AdjudicacionIn,
     response: Response,

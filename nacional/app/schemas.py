@@ -69,12 +69,14 @@ class DisponibilidadOut(BaseModel):
 
 
 class InventarioItemIn(BaseModel):
-    tipo_recurso: str
-    cantidad_total: int = Field(ge=0)
+    tipo_recurso: str = Field(description="Código del tipo de recurso", examples=["PARAMEDICO"])
+    cantidad_total: int = Field(ge=0, description="Stock total declarado", examples=[10])
 
 
 class InventarioIn(BaseModel):
-    items: list[InventarioItemIn] = Field(min_length=1)
+    items: list[InventarioItemIn] = Field(min_length=1, description="Stock por tipo de recurso")
+
+    model_config = ConfigDict(json_schema_extra={"example": {"items": [{"tipo_recurso": "PARAMEDICO", "cantidad_total": 10}]}})
 
 
 class NivelCompetencia(str, enum.Enum):
@@ -89,14 +91,16 @@ class Asignacion(str, enum.Enum):
 
 
 class ItemValidacionIn(BaseModel):
-    cuit: str
-    tipo_recurso: str
-    cantidad: int = Field(gt=0)
+    cuit: str = Field(description="CUIT de la ONG", examples=["30-54666544-5"])
+    tipo_recurso: str = Field(description="Código del recurso", examples=["PARAMEDICO"])
+    cantidad: int = Field(gt=0, description="Cantidad solicitada", examples=[4])
 
 
 class ValidacionIn(BaseModel):
-    gravedad: Riesgo
-    items: list[ItemValidacionIn] = Field(min_length=1)
+    gravedad: Riesgo = Field(description="Riesgo de la emergencia", examples=["ALTO"])
+    items: list[ItemValidacionIn] = Field(min_length=1, description="Recursos a validar")
+
+    model_config = ConfigDict(json_schema_extra={"example": {"gravedad": "ALTO", "items": [{"cuit": "30-54666544-5", "tipo_recurso": "PARAMEDICO", "cantidad": 4}]}})
 
 
 class ResultadoValidacionOut(BaseModel):
@@ -120,14 +124,16 @@ class ValidacionOut(BaseModel):
 
 
 class CierreItemIn(BaseModel):
-    tipo_recurso: str
-    cantidad: int = Field(gt=0)
+    tipo_recurso: str = Field(description="Código del recurso a liberar", examples=["PARAMEDICO"])
+    cantidad: int = Field(gt=0, description="Cantidad comprometida a liberar", examples=[4])
 
 
 class CierreIn(BaseModel):
-    cuit: str = Field(min_length=1, max_length=13)
-    referencia: str = Field(min_length=1, max_length=80)
-    items: list[CierreItemIn] = Field(min_length=1)
+    cuit: str = Field(min_length=1, max_length=13, description="CUIT de la ONG", examples=["30-54666544-5"])
+    referencia: str = Field(min_length=1, max_length=80, description="Referencia idempotente del cierre", examples=["emergencia-12"])
+    items: list[CierreItemIn] = Field(min_length=1, description="Recursos a liberar")
+
+    model_config = ConfigDict(json_schema_extra={"example": {"cuit": "30-54666544-5", "referencia": "emergencia-12", "items": [{"tipo_recurso": "PARAMEDICO", "cantidad": 4}]}})
 
 
 class CierreItemOut(BaseModel):
@@ -150,15 +156,17 @@ class CierreOut(BaseModel):
 
 
 class AdjudicacionItemIn(BaseModel):
-    inventario_id: int = Field(gt=0)
-    cantidad: int = Field(gt=0)
+    inventario_id: int = Field(gt=0, description="Identificador de inventario a comprometer", examples=[21])
+    cantidad: int = Field(gt=0, description="Cantidad a adjudicar", examples=[4])
 
 
 class AdjudicacionIn(BaseModel):
-    referencia_id: str = Field(min_length=1, max_length=80)
-    ong_id: int = Field(gt=0)
-    emergencia_id: int = Field(gt=0)
-    items: list[AdjudicacionItemIn] = Field(min_length=1)
+    referencia_id: str = Field(min_length=1, max_length=80, description="Referencia única para idempotencia", examples=["emergencia-12-ong-7"])
+    ong_id: int = Field(gt=0, description="Identificador de la ONG", examples=[7])
+    emergencia_id: int = Field(gt=0, description="Identificador de la emergencia", examples=[12])
+    items: list[AdjudicacionItemIn] = Field(min_length=1, description="Inventarios y cantidades a comprometer")
+
+    model_config = ConfigDict(json_schema_extra={"example": {"referencia_id": "emergencia-12-ong-7", "ong_id": 7, "emergencia_id": 12, "items": [{"inventario_id": 21, "cantidad": 4}]}})
 
 
 class AdjudicacionItemOut(BaseModel):
@@ -174,13 +182,13 @@ class AdjudicacionOut(BaseModel):
     fecha_creacion: datetime
     items: list[AdjudicacionItemOut]
 class ItemCompromisoIn(BaseModel):
-    tipo_recurso_id: int = Field(gt=0)
-    cantidad: int = Field(gt=0)
+    tipo_recurso_id: int = Field(gt=0, description="Identificador del tipo de recurso", examples=[3])
+    cantidad: int = Field(gt=0, description="Cantidad comprometida", examples=[4])
 
 class CompromisoIn(BaseModel):
-    emergencia_id: int = Field(gt=0)
-    ong_id: int = Field(gt=0)
-    items: list[ItemCompromisoIn] = Field(min_length=1)
+    emergencia_id: int = Field(gt=0, description="Identificador de la emergencia", examples=[12])
+    ong_id: int = Field(gt=0, description="Identificador de la ONG", examples=[7])
+    items: list[ItemCompromisoIn] = Field(min_length=1, description="Recursos comprometidos")
 
 class CompromisoItemOut(BaseModel):
     tipo_recurso_id: int

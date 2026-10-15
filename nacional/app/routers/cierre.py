@@ -10,7 +10,7 @@ from app.db import get_db
 from app.models import CierreItem, CierreOperativo, Inventario, Ong, TipoRecurso
 from app.schemas import CierreIn, CierreItemOut, CierreOut
 
-router = APIRouter(tags=["cierre"])
+router = APIRouter(tags=["Cierres"])
 
 
 def _out(cierre: CierreOperativo) -> CierreOut:
@@ -50,7 +50,19 @@ def _cargar_cierre(db: Session, cierre_id: int) -> CierreOperativo | None:
     )
 
 
-@router.post("/cierres", response_model=CierreOut, status_code=201, summary="Informar el cierre de una actividad y liberar recursos")
+@router.post(
+    "/cierres",
+    response_model=CierreOut,
+    status_code=201,
+    summary="Informar cierre y liberar recursos",
+    description="Libera atómicamente el inventario comprometido para una actividad.",
+    responses={
+        201: {"description": "Cierre registrado"},
+        404: {"description": "ONG o recurso inexistente"},
+        409: {"description": "Cierre duplicado o cantidad no comprometida"},
+        422: {"description": "Datos inválidos"},
+    },
+)
 def informar_cierre(body: CierreIn, db: Session = Depends(get_db)):
     """Resta `cantidad_comprometida` de cada ítem. La misma referencia no se puede informar dos veces."""
     ong = db.scalar(
@@ -116,7 +128,13 @@ def informar_cierre(body: CierreIn, db: Session = Depends(get_db)):
     return _out(cargado)
 
 
-@router.get("/cierres/{cierre_id}", response_model=CierreOut, summary="Ver un cierre ya informado")
+@router.get(
+    "/cierres/{cierre_id}",
+    response_model=CierreOut,
+    summary="Obtener un cierre",
+    description="Retorna el detalle de un cierre operativo registrado.",
+    responses={200: {"description": "Cierre obtenido"}, 404: {"description": "Cierre inexistente"}},
+)
 def obtener_cierre(cierre_id: int, db: Session = Depends(get_db)):
     cierre = _cargar_cierre(db, cierre_id)
     if cierre is None:
@@ -124,7 +142,13 @@ def obtener_cierre(cierre_id: int, db: Session = Depends(get_db)):
     return _out(cierre)
 
 
-@router.get("/ongs/{cuit}/cierres", response_model=list[CierreOut], summary="Cierres informados por una ONG")
+@router.get(
+    "/ongs/{cuit}/cierres",
+    response_model=list[CierreOut],
+    summary="Listar cierres de una ONG",
+    description="Retorna todos los cierres informados por la ONG.",
+    responses={200: {"description": "Cierres obtenidos"}, 404: {"description": "ONG inexistente"}},
+)
 def cierres_de_la_ong(cuit: str, db: Session = Depends(get_db)):
     ong = db.scalar(select(Ong).where(Ong.cuit == cuit))
     if ong is None:

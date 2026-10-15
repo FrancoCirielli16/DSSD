@@ -9,12 +9,19 @@ from app.models import Inventario, Ong, OngCertificacion, TipoRecurso
 from app.routers.catalogo import inventario_out
 from app.schemas import InventarioIn, InventarioOut
 
-router = APIRouter(tags=["inventario"])
+router = APIRouter(tags=["Inventario"])
 
 
 @router.put(
     "/ongs/{cuit}/inventario", response_model=list[InventarioOut],
     summary="Declarar el inventario de una ONG (upsert por tipo de recurso)",
+    description="Actualiza el stock total sin permitir reducir recursos ya comprometidos.",
+    responses={
+        200: {"description": "Inventario actualizado"},
+        404: {"description": "ONG o tipo de recurso inexistente"},
+        409: {"description": "El nuevo total es menor que el stock comprometido"},
+        422: {"description": "Tipos repetidos o datos inválidos"},
+    },
 )
 def declarar_inventario(cuit: str, body: InventarioIn, db: Session = Depends(get_db)):
     """Fija `cantidad_total` por tipo de recurso. No toca `cantidad_comprometida`: no se puede declarar

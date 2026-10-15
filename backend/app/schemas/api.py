@@ -23,8 +23,10 @@ class UsuarioOut(BaseModel):
 
 
 class LoginIn(BaseModel):
-    username: str = Field(min_length=1)
-    password: str = Field(min_length=1)
+    username: str = Field(min_length=1, description="Nombre de usuario", examples=["coordinador"])
+    password: str = Field(min_length=1, description="Contraseña del usuario", examples=["secreto"])
+
+    model_config = ConfigDict(json_schema_extra={"example": {"username": "coordinador", "password": "secreto"}})
 
 
 class TipoRecursoOut(BaseModel):
@@ -66,18 +68,22 @@ class EmergenciaOut(BaseModel):
 
 
 class PublicarIn(BaseModel):
-    ventana_fin: datetime
+    ventana_fin: datetime = Field(description="Fecha y hora UTC de cierre de la convocatoria", examples=["2026-10-16T18:00:00Z"])
+
+    model_config = ConfigDict(json_schema_extra={"example": {"ventana_fin": "2026-10-16T18:00:00Z"}})
 
 
 class OfertaItemIn(BaseModel):
-    lote_id: int
-    recurso: str = Field(min_length=1, max_length=120)
-    cantidad: int = Field(gt=0)
+    lote_id: int = Field(description="Identificador del lote ofrecido", examples=[12])
+    recurso: str = Field(min_length=1, max_length=120, description="Detalle del recurso ofrecido", examples=["Paramédicos"])
+    cantidad: int = Field(gt=0, description="Cantidad ofrecida", examples=[4])
 
 
 class OfertaIn(BaseModel):
     # Cada envío es la oferta completa. Lista vacía = retirar la oferta (queda como versión nueva sin ítems).
-    items: list[OfertaItemIn]
+    items: list[OfertaItemIn] = Field(description="Ítems de la oferta completa; vacío retira la oferta")
+
+    model_config = ConfigDict(json_schema_extra={"example": {"items": [{"lote_id": 12, "recurso": "Paramédicos", "cantidad": 4}]}})
 
 
 class OfertaItemOut(BaseModel):

@@ -2,3 +2,4 @@
 # A textual merge would silently corrupt the archive.
 *.bos binary
 *.bar binary
+*.sh text eol=lf

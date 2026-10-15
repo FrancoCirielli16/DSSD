@@ -75,7 +75,13 @@ def _require_visible(db: Session, user: Usuario, emergencia_id: int) -> Emergenc
     return emergencia
 
 
-@router.get("/meta")
+@router.get(
+    "/meta",
+    tags=["Health"],
+    summary="Obtener metadatos de la aplicación",
+    description="Retorna roles, tipos y configuración pública para clientes locales.",
+    responses={200: {"description": "Metadatos obtenidos"}},
+)
 def meta(settings: Settings = Depends(get_settings)):
     demo = None
     if settings.show_demo_users:
@@ -89,7 +95,14 @@ def meta(settings: Settings = Depends(get_settings)):
     return {"tipos": TIPO_LABEL, "roles": ROL_LABEL, "demo": demo}
 
 
-@router.post("/auth/login", response_model=UsuarioOut)
+@router.post(
+    "/auth/login",
+    response_model=UsuarioOut,
+    tags=["Autenticación"],
+    summary="Iniciar sesión",
+    description="Autentica un usuario y crea su sesión HTTP.",
+    responses={200: {"description": "Sesión iniciada"}, 401: {"description": "Credenciales inválidas"}, 422: {"description": "Datos inválidos"}},
+)
 def api_login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     user = db.scalar(select(Usuario).where(Usuario.username == body.username.strip()))
     if user is None or not verify_password(body.password, user.password_hash):
@@ -99,17 +112,38 @@ def api_login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     return user
 
 
-@router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/auth/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["Autenticación"],
+    summary="Cerrar sesión",
+    description="Invalida la sesión HTTP actual.",
+    responses={204: {"description": "Sesión cerrada"}},
+)
 def api_logout(request: Request):
     request.session.clear()
 
 
-@router.get("/auth/me", response_model=UsuarioOut)
+@router.get(
+    "/auth/me",
+    response_model=UsuarioOut,
+    tags=["Autenticación"],
+    summary="Consultar usuario actual",
+    description="Retorna la identidad del usuario autenticado.",
+    responses={200: {"description": "Usuario obtenido"}, 401: {"description": "No autenticado"}, 403: {"description": "Rol no autorizado"}},
+)
 def api_me(user: Usuario = Depends(require_role())):
     return user
 
 
-@router.get("/emergencias", response_model=list[EmergenciaOut])
+@router.get(
+    "/emergencias",
+    response_model=list[EmergenciaOut],
+    tags=["Emergencias"],
+    summary="Listar emergencias",
+    description="Lista las emergencias visibles para el usuario actual.",
+    responses={200: {"description": "Emergencias obtenidas"}, 401: {"description": "No autenticado"}, 403: {"description": "Rol no autorizado"}},
+)
 def api_listar(
     user: Usuario = Depends(require_role()),
     db: Session = Depends(get_db),
@@ -123,7 +157,15 @@ def api_listar(
     return out
 
 
-@router.post("/emergencias", response_model=EmergenciaOut, status_code=201)
+@router.post(
+    "/emergencias",
+    response_model=EmergenciaOut,
+    status_code=201,
+    tags=["Emergencias"],
+    summary="Crear emergencia",
+    description="Registra una emergencia y la prepara para gestionar sus lotes.",
+    responses={201: {"description": "Emergencia creada"}, 400: {"description": "Datos o estado inválidos"}, 401: {"description": "No autenticado"}, 403: {"description": "Se requiere rol de municipio"}, 502: {"description": "Bonita no disponible"}, 422: {"description": "Datos inválidos"}},
+)
 def api_crear(
     body: EmergenciaIn,
     user: Usuario = Depends(require_role(Rol.MUNICIPIO)),
@@ -138,7 +180,14 @@ def api_crear(
     return _emergencia_out(full or emergencia)
 
 
-@router.get("/emergencias/{emergencia_id}", response_model=EmergenciaOut)
+@router.get(
+    "/emergencias/{emergencia_id}",
+    response_model=EmergenciaOut,
+    tags=["Emergencias"],
+    summary="Obtener emergencia",
+    description="Retorna el detalle de una emergencia visible para el usuario.",
+    responses={200: {"description": "Emergencia obtenida"}, 401: {"description": "No autenticado"}, 404: {"description": "Emergencia inexistente"}},
+)
 def api_detalle(
     emergencia_id: int,
     user: Usuario = Depends(require_role()),
@@ -154,7 +203,14 @@ def api_detalle(
 NACIONAL_CAIDO = "El Sistema Nacional no responde; probá de nuevo en un momento."
 
 
-@router.get("/tipos-recurso", response_model=list[TipoRecursoOut])
+@router.get(
+    "/tipos-recurso",
+    response_model=list[TipoRecursoOut],
+    tags=["Catálogo"],
+    summary="Listar tipos de recurso",
+    description="Obtiene el catálogo del Sistema Nacional para crear lotes.",
+    responses={200: {"description": "Catálogo obtenido"}, 503: {"description": "Sistema Nacional no disponible"}},
+)
 def api_tipos_recurso(
     user: Usuario = Depends(require_role()),
     nacional: NacionalClient = Depends(get_nacional),
@@ -166,7 +222,15 @@ def api_tipos_recurso(
         raise HTTPException(status_code=503, detail=NACIONAL_CAIDO) from exc
 
 
-@router.post("/emergencias/{emergencia_id}/lotes", response_model=LoteOut, status_code=201)
+@router.post(
+    "/emergencias/{emergencia_id}/lotes",
+    response_model=LoteOut,
+    status_code=201,
+    tags=["Lotes"],
+    summary="Agregar lote a una emergencia",
+    description="Crea un lote usando un tipo de recurso válido del catálogo nacional.",
+    responses={201: {"description": "Lote creado"}, 400: {"description": "Lote inválido"}, 401: {"description": "No autenticado"}, 403: {"description": "Se requiere rol de coordinador"}, 404: {"description": "Emergencia inexistente"}, 503: {"description": "Sistema Nacional no disponible"}, 422: {"description": "Datos inválidos"}},
+)
 def api_crear_lote(
     emergencia_id: int,
     body: LoteIn,
@@ -184,7 +248,14 @@ def api_crear_lote(
     return lote
 
 
-@router.delete("/emergencias/{emergencia_id}/lotes/{lote_id}", status_code=204)
+@router.delete(
+    "/emergencias/{emergencia_id}/lotes/{lote_id}",
+    status_code=204,
+    tags=["Lotes"],
+    summary="Eliminar lote",
+    description="Elimina un lote de una emergencia antes de su publicación.",
+    responses={204: {"description": "Lote eliminado"}, 400: {"description": "Lote no puede eliminarse"}, 401: {"description": "No autenticado"}, 403: {"description": "Se requiere rol de coordinador"}, 404: {"description": "Emergencia o lote inexistente"}},
+)
 def api_borrar_lote(
     emergencia_id: int,
     lote_id: int,
@@ -198,7 +269,14 @@ def api_borrar_lote(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/emergencias/{emergencia_id}/publicar", response_model=EmergenciaOut)
+@router.post(
+    "/emergencias/{emergencia_id}/publicar",
+    response_model=EmergenciaOut,
+    tags=["Emergencias"],
+    summary="Publicar convocatoria",
+    description="Abre la ventana de recepción de ofertas de una emergencia.",
+    responses={200: {"description": "Convocatoria publicada"}, 400: {"description": "Estado o ventana inválida"}, 401: {"description": "No autenticado"}, 403: {"description": "Se requiere rol de coordinador"}, 404: {"description": "Emergencia inexistente"}},
+)
 def api_publicar(
     emergencia_id: int,
     body: PublicarIn,
@@ -234,7 +312,14 @@ def _oferta_out(o: Oferta) -> OfertaOut:
     )
 
 
-@router.get("/emergencias/{emergencia_id}/ofertas", response_model=list[OfertaOut])
+@router.get(
+    "/emergencias/{emergencia_id}/ofertas",
+    response_model=list[OfertaOut],
+    tags=["Ofertas"],
+    summary="Listar ofertas",
+    description="Lista las ofertas visibles para la emergencia y el usuario actual.",
+    responses={200: {"description": "Ofertas obtenidas"}, 401: {"description": "No autenticado"}, 404: {"description": "Emergencia inexistente"}},
+)
 def api_listar_ofertas(
     emergencia_id: int,
     user: Usuario = Depends(require_role()),
@@ -248,7 +333,15 @@ def api_listar_ofertas(
     return [_oferta_out(o) for o in ofertas]
 
 
-@router.post("/emergencias/{emergencia_id}/ofertas", response_model=OfertaOut, status_code=201)
+@router.post(
+    "/emergencias/{emergencia_id}/ofertas",
+    response_model=OfertaOut,
+    status_code=201,
+    tags=["Ofertas"],
+    summary="Publicar oferta de ayuda",
+    description="Guarda una nueva versión completa de la oferta de una ONG.",
+    responses={201: {"description": "Oferta publicada"}, 400: {"description": "Oferta inválida"}, 401: {"description": "No autenticado"}, 403: {"description": "Se requiere rol de ONG"}, 404: {"description": "Emergencia inexistente"}, 503: {"description": "Sistema Nacional no disponible"}, 422: {"description": "Datos inválidos"}},
+)
 def api_crear_oferta(
     emergencia_id: int,
     body: OfertaIn,

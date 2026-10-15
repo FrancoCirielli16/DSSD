@@ -18,7 +18,7 @@ from app.schemas import (
 )
 from app.services.catalogo import riesgo_permitido
 
-router = APIRouter(tags=["catálogo"])
+router = APIRouter(tags=["Catálogo"])
 
 
 def _tipo_out(t: TipoRecurso) -> TipoRecursoOut:
@@ -36,7 +36,13 @@ def inventario_out(ong: Ong, i: Inventario, hoy: date) -> InventarioOut:
     )
 
 
-@router.get("/tipos-recurso", response_model=list[TipoRecursoOut], summary="Catálogo de tipos de recurso")
+@router.get(
+    "/tipos-recurso",
+    response_model=list[TipoRecursoOut],
+    summary="Listar tipos de recurso",
+    description="Retorna el catálogo nacional de recursos disponibles.",
+    responses={200: {"description": "Catálogo obtenido"}, 422: {"description": "Parámetros inválidos"}},
+)
 def listar_tipos_recurso(db: Session = Depends(get_db)):
     tipos = db.scalars(
         select(TipoRecurso).options(selectinload(TipoRecurso.certificacion)).order_by(TipoRecurso.codigo)
@@ -44,7 +50,13 @@ def listar_tipos_recurso(db: Session = Depends(get_db)):
     return [_tipo_out(t) for t in tipos]
 
 
-@router.get("/certificaciones", response_model=list[CertificacionOut], summary="Catálogo de certificaciones")
+@router.get(
+    "/certificaciones",
+    response_model=list[CertificacionOut],
+    summary="Listar certificaciones",
+    description="Retorna las certificaciones y los tipos de recurso que habilita cada una.",
+    responses={200: {"description": "Certificaciones obtenidas"}},
+)
 def listar_certificaciones(db: Session = Depends(get_db)):
     tipos = db.scalars(select(TipoRecurso).order_by(TipoRecurso.codigo)).all()
     return [
@@ -56,7 +68,13 @@ def listar_certificaciones(db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/ongs", response_model=list[OngOut], summary="ONGs del registro nacional")
+@router.get(
+    "/ongs",
+    response_model=list[OngOut],
+    summary="Listar ONGs",
+    description="Lista las ONGs registradas, opcionalmente filtradas por estado.",
+    responses={200: {"description": "ONGs obtenidas"}, 422: {"description": "Filtro inválido"}},
+)
 def listar_ongs(
     estado: EstadoOng | None = Query(None, description="Filtra por estado; HABILITADA = ONGs habilitadas"),
     db: Session = Depends(get_db),
@@ -67,7 +85,13 @@ def listar_ongs(
     return db.scalars(query).all()
 
 
-@router.get("/ongs/{cuit}", response_model=FichaOngOut, summary="Ficha de una ONG")
+@router.get(
+    "/ongs/{cuit}",
+    response_model=FichaOngOut,
+    summary="Obtener ficha de una ONG",
+    description="Retorna certificaciones e inventario detallado de una ONG.",
+    responses={200: {"description": "Ficha obtenida"}, 404: {"description": "ONG no registrada"}},
+)
 def ficha_ong(cuit: str, db: Session = Depends(get_db)):
     ong = db.scalar(
         select(Ong).where(Ong.cuit == cuit).options(
@@ -94,6 +118,8 @@ def ficha_ong(cuit: str, db: Session = Depends(get_db)):
 @router.get(
     "/recursos/disponibilidad", response_model=list[DisponibilidadOut],
     summary="Disponibilidad global de recursos (solo ONGs habilitadas)",
+    description="Consolida el stock total, comprometido y disponible por tipo y ONG.",
+    responses={200: {"description": "Disponibilidad obtenida"}, 404: {"description": "Tipo de recurso inexistente"}},
 )
 def disponibilidad(
     tipo_recurso: str | None = Query(None, description="Código del tipo de recurso; sin él, todos"),

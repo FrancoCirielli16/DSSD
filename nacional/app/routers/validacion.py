@@ -7,10 +7,16 @@ from app.db import get_db
 from app.schemas import ValidacionIn, ValidacionOut
 from app.services.validacion import TipoRecursoDesconocido, validar
 
-router = APIRouter(tags=["validación"])
+router = APIRouter(tags=["Validación"])
 
 
-@router.post("/validaciones", response_model=ValidacionOut, summary="Validar ofertas por cantidad y competencia")
+@router.post(
+    "/validaciones",
+    response_model=ValidacionOut,
+    summary="Validar ofertas por cantidad y competencia",
+    description="Evalúa disponibilidad y competencia sin modificar inventario.",
+    responses={200: {"description": "Validación calculada"}, 422: {"description": "Tipo de recurso o datos inválidos"}},
+)
 def validar_ofertas(body: ValidacionIn, db: Session = Depends(get_db)):
     """Evalúa lo ofrecido por cada ONG contra su inventario disponible y su competencia para la
     gravedad de la emergencia. **No guarda nada**: las ofertas viven en la app local.

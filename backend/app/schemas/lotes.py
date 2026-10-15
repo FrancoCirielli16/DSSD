@@ -16,14 +16,32 @@ ETIQUETAS = {
 class LoteIn(BaseModel):
     """El recurso se elige del catálogo del Sistema Nacional; el nombre y la unidad salen de ahí."""
 
-    model_config = ConfigDict(str_strip_whitespace=True)
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        json_schema_extra={
+            "example": {
+                "tipo_recurso": "PARAMEDICO",
+                "detalle": "Con equipo de trauma",
+                "cantidad": 5,
+                "tipo": "PRINCIPAL",
+            }
+        },
+    )
 
-    tipo_recurso: str = Field(min_length=1, max_length=40, description="Código del recurso del catálogo nacional", examples=["PARAMEDICO"])
-    detalle: str | None = Field(None, max_length=80, description="Detalle opcional del lote", examples=["Con equipo de trauma"])
+    tipo_recurso: str = Field(
+        min_length=1,
+        max_length=40,
+        description="Código del recurso del catálogo nacional",
+        examples=["PARAMEDICO"],
+    )
+    detalle: str | None = Field(
+        default=None,
+        max_length=80,
+        description="Detalle opcional del lote",
+        examples=["Con equipo de trauma"],
+    )
     cantidad: int = Field(gt=0, description="Cantidad requerida", examples=[5])
     tipo: TipoLote = Field(default=TipoLote.PRINCIPAL, description="Tipo operativo del lote", examples=["PRINCIPAL"])
-
-    model_config = ConfigDict(json_schema_extra={"example": {"tipo_recurso": "PARAMEDICO", "detalle": "Con equipo de trauma", "cantidad": 5, "tipo": "PRINCIPAL"}})
 
     @field_validator("detalle")
     @classmethod

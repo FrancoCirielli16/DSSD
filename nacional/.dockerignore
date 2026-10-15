@@ -1,3 +1,4 @@
+.git
 .venv
 __pycache__
 **/__pycache__
@@ -5,4 +6,5 @@ __pycache__
 *.db
 .env
 .pytest_cache
-tests
+tests/
+.DS_Store
